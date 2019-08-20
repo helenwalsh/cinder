@@ -74,6 +74,16 @@ class PowerMaxVolumeMetadataDebugTest(test.TestCase):
     @mock.patch.object(
         metadata.PowerMaxVolumeMetadata, 'update_volume_info_metadata',
         return_value={})
+    def test_capture_attach_info_tags(self, mock_uvim):
+        self.volume_metadata.capture_attach_info(
+            self.data.test_volume, self.data.extra_specs,
+            self.data.masking_view_dict_tags, self.data.fake_host,
+            False, False)
+        mock_uvim.assert_called_once()
+
+    @mock.patch.object(
+        metadata.PowerMaxVolumeMetadata, 'update_volume_info_metadata',
+        return_value={})
     def test_capture_create_volume(self, mock_uvim):
         self.volume_metadata.capture_create_volume(
             self.data.device_id, self.data.test_volume, 'test_group',
@@ -102,7 +112,7 @@ class PowerMaxVolumeMetadataDebugTest(test.TestCase):
     def test_capture_failover_volume(self, mock_uvim):
         self.volume_metadata.capture_failover_volume(
             self.data.test_volume, self.data.device_id2,
-            self.data.remote_array, self.data.rdf_group_name,
+            self.data.remote_array, self.data.rdf_group_name_1,
             self.data.device_id, self.data.array,
             self.data.extra_specs, True, None,
             fields.ReplicationStatus.FAILED_OVER, utils.REP_SYNC)
@@ -152,7 +162,7 @@ class PowerMaxVolumeMetadataDebugTest(test.TestCase):
             self.data.test_volume, self.data.device_id, self.data.array,
             self.data.srp, self.data.slo, self.data.workload,
             self.data.storagegroup_name_target, False, None,
-            False)
+            False, None)
         mock_uvim.assert_called_once()
 
     def test_update_volume_info_metadata(self):
@@ -191,6 +201,20 @@ class PowerMaxVolumeMetadataDebugTest(test.TestCase):
             datadict=datadict, volume_trace_dict=volume_trace_dict,
             volume_key_value=volume_key_value, mv_list=mv_list,
             sg_list=sg_list)
+        self.assertEqual(result_dict, volume_metadata)
+
+    def test_fill_volume_trace_dict_array_tags(self):
+        datadict = {}
+        volume_trace_dict = {}
+        volume_key_value = {}
+        result_dict = {'successful_operation': 'create',
+                       'volume_id': self.data.test_volume.id,
+                       'array_tag_list': ['one', 'two']}
+        volume_metadata = self.volume_metadata._fill_volume_trace_dict(
+            self.data.test_volume.id, 'create', False, target_name=None,
+            datadict=datadict, volume_key_value=volume_key_value,
+            volume_trace_dict=volume_trace_dict,
+            array_tag_list=['one', 'two'])
         self.assertEqual(result_dict, volume_metadata)
 
     @mock.patch.object(utils.PowerMaxUtils, 'merge_dicts',

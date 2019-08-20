@@ -199,7 +199,7 @@ class FakeRequestsSession(object):
         elif 'rdf_group' in url:
             if self.data.device_id in url:
                 return_object = self.data.rdf_group_vol_details
-            elif self.data.rdf_group_no in url:
+            elif self.data.rdf_group_no_1 in url:
                 return_object = self.data.rdf_group_details
             else:
                 return_object = self.data.rdf_group_list
@@ -231,6 +231,8 @@ class FakeRequestsSession(object):
                     break
         elif 'info' in url:
             return_object = self.data.version_details
+        elif 'tag' in url:
+            return_object = []
         else:
             for symm in self.data.symmetrix:
                 if symm['symmetrixId'] in url:
@@ -280,7 +282,7 @@ class FakeConfiguration(object):
         self.config_group = volume_backend_name
         self.san_is_local = False
         if replication_device:
-            self.replication_device = [replication_device]
+            self.replication_device = replication_device
         for key, value in kwargs.items():
             if key == 'san_login':
                 self.san_login = value
@@ -320,6 +322,10 @@ class FakeConfiguration(object):
                 self.u4p_failover_timeout = value
             elif key == 'u4p_primary':
                 self.u4p_primary = value
+            elif key == 'powermax_short_host_name_template':
+                self.powermax_short_host_name_template = value
+            elif key == 'powermax_port_group_name_template':
+                self.powermax_port_group_name_template = value
 
     def safe_get(self, key):
         try:

@@ -38,14 +38,16 @@ FC = 'fc'
 INTERVAL = 'interval'
 RETRIES = 'retries'
 VOLUME_ELEMENT_NAME_PREFIX = 'OS-'
-VMAX_AFA_MODELS = ['VMAX250F', 'VMAX450F', 'VMAX850F', 'VMAX950F']
 MAX_SRP_LENGTH = 16
 TRUNCATE_5 = 5
 TRUNCATE_27 = 27
 UCODE_5978_ELMSR = 221
 UCODE_5978 = 5978
+UPPER_HOST_CHARS = 16
+UPPER_PORT_GROUP_CHARS = 12
 
 ARRAY = 'array'
+REMOTE_ARRAY = 'remote_array'
 SLO = 'slo'
 WORKLOAD = 'workload'
 SRP = 'srp'
@@ -53,6 +55,7 @@ PORTGROUPNAME = 'storagetype:portgroupname'
 DEVICE_ID = 'device_id'
 INITIATOR_CHECK = 'initiator_check'
 SG_NAME = 'storagegroup_name'
+SG_ID = 'storageGroupId'
 MV_NAME = 'maskingview_name'
 IG_NAME = 'init_group_name'
 PARENT_SG_NAME = 'parent_sg_name'
@@ -61,6 +64,7 @@ VOL_NAME = 'volume_name'
 EXTRA_SPECS = 'extra_specs'
 HOST_NAME = 'short_host_name'
 IS_RE = 'replication_enabled'
+IS_RE_CAMEL = 'ReplicationEnabled'
 DISABLECOMPRESSION = 'storagetype:disablecompression'
 REP_SYNC = 'Synchronous'
 REP_ASYNC = 'Asynchronous'
@@ -74,10 +78,27 @@ RDF_FAILEDOVER_STATE = 'failed over'
 RDF_ACTIVE = 'active'
 RDF_ACTIVEACTIVE = 'activeactive'
 RDF_ACTIVEBIAS = 'activebias'
-RDF_CONS_EXEMPT = 'consExempt'
+RDF_VALID_STATES_SYNC = [RDF_SYNC_STATE, RDF_SYNCINPROG_STATE]
+RDF_VALID_STATES_ASYNC = [RDF_CONSISTENT_STATE, RDF_SUSPENDED_STATE,
+                          RDF_SYNCINPROG_STATE]
+RDF_VALID_STATES_METRO = [RDF_ACTIVEBIAS, RDF_ACTIVEACTIVE,
+                          RDF_SUSPENDED_STATE, RDF_SYNCINPROG_STATE]
+RDF_CONS_EXEMPT = 'exempt'
+RDF_ALLOW_METRO_DELETE = 'allow_delete_metro'
+RDF_GROUP_NO = 'rdf_group_number'
 METROBIAS = 'metro_bias'
+BACKEND_ID = 'backend_id'
+BACKEND_ID_LEGACY_REP = 'backend_id_legacy_rep'
+REPLICATION_DEVICE_BACKEND_ID = 'storagetype:replication_device_backend_id'
+REP_CONFIG = 'rep_config'
 DEFAULT_PORT = 8443
 CLONE_SNAPSHOT_NAME = "snapshot_for_clone"
+STORAGE_GROUP_TAGS = 'storagetype:storagegrouptags'
+TAG_LIST = 'tag_list'
+USED_HOST_NAME = "used_host_name"
+RDF_SYNCED_STATES = [RDF_SYNC_STATE, RDF_CONSISTENT_STATE,
+                     RDF_ACTIVEACTIVE, RDF_ACTIVEBIAS]
+FORCE_VOL_REMOVE = 'force_vol_remove'
 
 # Multiattach constants
 IS_MULTIATTACH = 'multiattach'
@@ -109,6 +130,26 @@ POWERMAX_SRP = 'powermax_srp'
 POWERMAX_SERVICE_LEVEL = 'powermax_service_level'
 POWERMAX_PORT_GROUPS = 'powermax_port_groups'
 POWERMAX_SNAPVX_UNLINK_LIMIT = 'powermax_snapvx_unlink_limit'
+POWERMAX_ARRAY_TAG_LIST = 'powermax_array_tag_list'
+POWERMAX_SHORT_HOST_NAME_TEMPLATE = 'powermax_short_host_name_template'
+POWERMAX_PORT_GROUP_NAME_TEMPLATE = 'powermax_port_group_name_template'
+PORT_GROUP_LABEL = 'port_group_label'
+
+# Array Models, Service Levels & Workloads
+VMAX_HYBRID_MODELS = ['VMAX100K', 'VMAX200K', 'VMAX400K']
+VMAX_AFA_MODELS = ['VMAX250F', 'VMAX450F', 'VMAX850F', 'VMAX950F']
+PMAX_MODELS = ['PowerMax_2000', 'PowerMax_8000']
+
+HYBRID_SLS = ['Diamond', 'Platinum', 'Gold', 'Silver', 'Bronze', 'Optimized',
+              'None', 'NONE']
+HYBRID_WLS = ['OLTP', 'OLTP_REP', 'DSS', 'DSS_REP', 'NONE', 'None']
+AFA_H_SLS = ['Diamond', 'Optimized', 'None', 'NONE']
+AFA_P_SLS = ['Diamond', 'Platinum', 'Gold', 'Silver', 'Bronze', 'Optimized',
+             'None', 'NONE']
+AFA_WLS = ['OLTP', 'OLTP_REP', 'DSS', 'DSS_REP', 'NONE', 'None']
+PMAX_SLS = ['Diamond', 'Platinum', 'Gold', 'Silver', 'Bronze', 'Optimized',
+            'None', 'NONE']
+PMAX_WLS = ['NONE', 'None']
 
 
 class PowerMaxUtils(object):
@@ -130,13 +171,27 @@ class PowerMaxUtils(object):
         :param host_name: the fully qualified host name
         :returns: string -- the short host_name
         """
+        short_host_name = self.get_host_short_name_from_fqn(host_name)
+
+        return self.generate_unique_trunc_host(short_host_name)
+
+    @staticmethod
+    def get_host_short_name_from_fqn(host_name):
+        """Returns the short name for a given qualified host name.
+
+        Checks the host name to see if it is the fully qualified host name
+        and returns part before the dot. If there is no dot in the host name
+        the full host name is returned.
+        :param host_name: the fully qualified host name
+        :returns: string -- the short host_name
+        """
         host_array = host_name.split('.')
         if len(host_array) > 1:
             short_host_name = host_array[0]
         else:
             short_host_name = host_name
 
-        return self.generate_unique_trunc_host(short_host_name)
+        return short_host_name
 
     @staticmethod
     def get_volumetype_extra_specs(volume, volume_type_id=None):
@@ -262,7 +317,7 @@ class PowerMaxUtils(object):
         :param snapshot_name: the old snapshot backend display name
         :param manage: (bool) if the operation is managing a snapshot
         :param unmanage: (bool) if the operation is unmanaging a snapshot
-        :return: snapshot name ready for backend PowerMax/VMAX assignment
+        :returns: snapshot name ready for backend PowerMax/VMAX assignment
         """
         new_snap_name = None
         if manage:
@@ -283,15 +338,12 @@ class PowerMaxUtils(object):
         :param host_name: long host name
         :returns: truncated host name
         """
-        if host_name and len(host_name) > 16:
-            host_name = host_name.lower()
-            m = hashlib.md5()
-            m.update(host_name.encode('utf-8'))
-            uuid = m.hexdigest()
+        if host_name and len(host_name) > UPPER_HOST_CHARS:
+            uuid = self.get_uuid_of_input(host_name)
             new_name = ("%(host)s%(uuid)s"
                         % {'host': host_name[-6:],
                            'uuid': uuid})
-            host_name = self.truncate_string(new_name, 16)
+            host_name = self.truncate_string(new_name, UPPER_HOST_CHARS)
         return host_name
 
     def get_pg_short_name(self, portgroup_name):
@@ -300,16 +352,26 @@ class PowerMaxUtils(object):
         :param portgroup_name: long portgroup_name
         :returns: truncated portgroup_name
         """
-        if portgroup_name and len(portgroup_name) > 12:
-            portgroup_name = portgroup_name.lower()
-            m = hashlib.md5()
-            m.update(portgroup_name.encode('utf-8'))
-            uuid = m.hexdigest()
+        if portgroup_name and len(portgroup_name) > UPPER_PORT_GROUP_CHARS:
+            uuid = self.get_uuid_of_input(portgroup_name)
             new_name = ("%(pg)s%(uuid)s"
                         % {'pg': portgroup_name[-6:],
                            'uuid': uuid})
-            portgroup_name = self.truncate_string(new_name, 12)
+            portgroup_name = self.truncate_string(
+                new_name, UPPER_PORT_GROUP_CHARS)
         return portgroup_name
+
+    @staticmethod
+    def get_uuid_of_input(input_str):
+        """Get the uuid of the input string
+
+        :param input_str: input string
+        :returns: uuid
+        """
+        input_str = input_str.lower()
+        m = hashlib.md5()
+        m.update(input_str.encode('utf-8'))
+        return m.hexdigest()
 
     @staticmethod
     def get_default_oversubscription_ratio(max_over_sub_ratio):
@@ -331,7 +393,7 @@ class PowerMaxUtils(object):
         """Construct a temporary snapshot name for clone operation
 
         :param source_device_id: the source device id
-        :return: snap_name
+        :returns: snap_name
         """
         snap_name = ("temp-%(device)s-%(snap_name)s"
                      % {'device': source_device_id,
@@ -372,18 +434,28 @@ class PowerMaxUtils(object):
                 message=exception_message)
         return array, device_id.upper()
 
-    @staticmethod
-    def is_compression_disabled(extra_specs):
+    def is_compression_disabled(self, extra_specs):
         """Check is compression is to be disabled.
 
         :param extra_specs: extra specifications
         :returns: boolean
         """
-        do_disable_compression = False
-        if (DISABLECOMPRESSION in extra_specs and strutils.bool_from_string(
-                extra_specs[DISABLECOMPRESSION])) or not extra_specs.get(SLO):
-            do_disable_compression = True
-        return do_disable_compression
+        compression_disabled = False
+
+        if extra_specs.get(DISABLECOMPRESSION, False):
+            if strutils.bool_from_string(extra_specs.get(DISABLECOMPRESSION)):
+                compression_disabled = True
+        else:
+            if extra_specs.get(SLO):
+                service_level = extra_specs.get(SLO)
+            else:
+                __, __, service_level, __ = self.parse_specs_from_pool_name(
+                    extra_specs.get('pool_name'))
+
+            if not service_level:
+                compression_disabled = True
+
+        return compression_disabled
 
     def change_compression_type(self, is_source_compr_disabled, new_type):
         """Check if volume type have different compression types
@@ -399,15 +471,31 @@ class PowerMaxUtils(object):
         else:
             return True
 
-    def change_replication(self, vol_is_replicated, new_type):
+    def change_replication(self, curr_type_extra_specs, tgt_type_extra_specs):
         """Check if volume types have different replication status.
 
-        :param vol_is_replicated: from source
-        :param new_type: from target
-        :return: bool
+        :param curr_type_extra_specs: extra specs from source volume type
+        :param tgt_type_extra_specs: extra specs from target volume type
+        :returns: bool
         """
-        is_tgt_rep = self.is_replication_enabled(new_type['extra_specs'])
-        return vol_is_replicated != is_tgt_rep
+        change_replication = False
+        # Compare non-rep & rep enabled changes
+        is_cur_rep = self.is_replication_enabled(curr_type_extra_specs)
+        is_tgt_rep = self.is_replication_enabled(tgt_type_extra_specs)
+        rep_enabled_diff = is_cur_rep != is_tgt_rep
+
+        if rep_enabled_diff:
+            change_replication = True
+        elif is_cur_rep:
+            # Both types are rep enabled, check for backend id differences
+            rdbid = REPLICATION_DEVICE_BACKEND_ID
+            curr_rep_backend_id = curr_type_extra_specs.get(rdbid, None)
+            tgt_rep_backend_id = tgt_type_extra_specs.get(rdbid, None)
+            rdbid_diff = curr_rep_backend_id != tgt_rep_backend_id
+            if rdbid_diff:
+                change_replication = True
+
+        return change_replication
 
     @staticmethod
     def is_replication_enabled(extra_specs):
@@ -426,51 +514,70 @@ class PowerMaxUtils(object):
         """Gather necessary replication configuration info.
 
         :param rep_device_list: the replication device list from cinder.conf
-        :returns: rep_config, replication configuration dict
+        :returns: rep_configs, replication configuration list
         """
-        rep_config = {}
+        rep_config = list()
         if not rep_device_list:
             return None
         else:
-            target = rep_device_list[0]
-            try:
-                rep_config['array'] = target['target_device_id']
-                rep_config['srp'] = target['remote_pool']
-                rep_config['rdf_group_label'] = target['rdf_group_label']
-                rep_config['portgroup'] = target['remote_port_group']
+            for rep_device in rep_device_list:
+                rep_config_element = {}
+                try:
+                    rep_config_element['array'] = rep_device[
+                        'target_device_id']
+                    rep_config_element['srp'] = rep_device['remote_pool']
+                    rep_config_element['rdf_group_label'] = rep_device[
+                        'rdf_group_label']
+                    rep_config_element['portgroup'] = rep_device[
+                        'remote_port_group']
 
-            except KeyError as ke:
-                error_message = (_("Failed to retrieve all necessary SRDF "
-                                   "information. Error received: %(ke)s.") %
-                                 {'ke': six.text_type(ke)})
-                LOG.exception(error_message)
-                raise exception.VolumeBackendAPIException(
-                    message=error_message)
+                except KeyError as ke:
+                    error_message = (
+                        _("Failed to retrieve all necessary SRDF "
+                          "information. Error received: %(ke)s.") %
+                        {'ke': six.text_type(ke)})
+                    LOG.exception(error_message)
+                    raise exception.VolumeBackendAPIException(
+                        message=error_message)
 
-            allow_extend = target.get('allow_extend', 'false')
-            if strutils.bool_from_string(allow_extend):
-                rep_config['allow_extend'] = True
-            else:
-                rep_config['allow_extend'] = False
+                try:
+                    rep_config_element['sync_retries'] = int(
+                        rep_device['sync_retries'])
+                    rep_config_element['sync_interval'] = int(
+                        rep_device['sync_interval'])
+                except (KeyError, ValueError) as ke:
+                    LOG.debug(
+                        "SRDF Sync wait/retries options not set or set "
+                        "incorrectly, defaulting to 200 retries with a 3 "
+                        "second wait. Configuration load warning: %(ke)s.",
+                        {'ke': six.text_type(ke)})
+                    rep_config_element['sync_retries'] = 200
+                    rep_config_element['sync_interval'] = 3
 
-            rep_mode = target.get('mode', '')
-            if rep_mode.lower() in ['async', 'asynchronous']:
-                rep_config['mode'] = REP_ASYNC
-            elif rep_mode.lower() == 'metro':
-                rep_config['mode'] = REP_METRO
-                metro_bias = target.get('metro_use_bias', 'false')
-                if strutils.bool_from_string(metro_bias):
-                    rep_config[METROBIAS] = True
+                allow_extend = rep_device.get('allow_extend', 'false')
+                if strutils.bool_from_string(allow_extend):
+                    rep_config_element['allow_extend'] = True
                 else:
-                    rep_config[METROBIAS] = False
-                allow_delete_metro = target.get('allow_delete_metro', 'false')
-                if strutils.bool_from_string(allow_delete_metro):
-                    rep_config['allow_delete_metro'] = True
-                else:
-                    rep_config['allow_delete_metro'] = False
-            else:
-                rep_config['mode'] = REP_SYNC
+                    rep_config_element['allow_extend'] = False
 
+                rep_mode = rep_device.get('mode', '')
+                if rep_mode.lower() in ['async', 'asynchronous']:
+                    rep_config_element['mode'] = REP_ASYNC
+                elif rep_mode.lower() == 'metro':
+                    rep_config_element['mode'] = REP_METRO
+                    metro_bias = rep_device.get('metro_use_bias', 'false')
+                    if strutils.bool_from_string(metro_bias):
+                        rep_config_element[METROBIAS] = True
+                    else:
+                        rep_config_element[METROBIAS] = False
+                else:
+                    rep_config_element['mode'] = REP_SYNC
+
+                backend_id = rep_device.get(BACKEND_ID, '')
+                if backend_id:
+                    rep_config_element[BACKEND_ID] = backend_id
+
+                rep_config.append(rep_config_element)
         return rep_config
 
     @staticmethod
@@ -603,7 +710,7 @@ class PowerMaxUtils(object):
         """Add legacy pools to allow extending a volume after upgrade.
 
         :param pools: the pool list
-        :return: pools - the updated pool list
+        :returns: pools - the updated pool list
         """
         extra_pools = []
         for pool in pools:
@@ -677,7 +784,7 @@ class PowerMaxUtils(object):
         synchronous, asynchronous, or metro replication mode.
 
         :param rep_mode: flag to indicate if replication is async
-        :return: prefix
+        :returns: prefix
         """
         if rep_mode == REP_ASYNC:
             prefix = "-RA"
@@ -688,36 +795,36 @@ class PowerMaxUtils(object):
         return prefix
 
     @staticmethod
-    def get_async_rdf_managed_grp_name(rep_config):
+    def get_rdf_management_group_name(rep_config):
         """Get the name of the group used for async replication management.
 
         :param rep_config: the replication configuration
-        :return: group name
+        :returns: group name
         """
-        async_grp_name = ("OS-%(rdf)s-%(mode)s-rdf-sg"
-                          % {'rdf': rep_config['rdf_group_label'],
-                             'mode': rep_config['mode']})
-        LOG.debug("The async/ metro rdf managed group name is %(name)s",
-                  {'name': async_grp_name})
-        return async_grp_name
+        grp_name = ("OS-%(rdf)s-%(mode)s-rdf-sg" %
+                    {'rdf': rep_config['rdf_group_label'],
+                     'mode': rep_config['mode']})
+        LOG.debug("The rdf managed group name is %(name)s",
+                  {'name': grp_name})
+        return grp_name
 
     def is_metro_device(self, rep_config, extra_specs):
         """Determine if a volume is a Metro enabled device.
 
         :param rep_config: the replication configuration
         :param extra_specs: the extra specifications
-        :return: bool
+        :returns: bool
         """
         is_metro = (True if self.is_replication_enabled(extra_specs)
                     and rep_config is not None
-                    and rep_config['mode'] == REP_METRO else False)
+                    and rep_config.get('mode') == REP_METRO else False)
         return is_metro
 
     def does_vol_need_rdf_management_group(self, extra_specs):
         """Determine if a volume is a Metro or Async.
 
         :param extra_specs: the extra specifications
-        :return: bool
+        :returns: bool
         """
         if (self.is_replication_enabled(extra_specs) and
                 extra_specs.get(REP_MODE, None) in
@@ -729,6 +836,7 @@ class PowerMaxUtils(object):
         """Get the name of the default sg from the extra specs.
 
         :param extra_specs: extra specs
+        :param rep_mode: replication mode
         :returns: default sg - string
         """
         do_disable_compression = self.is_compression_disabled(
@@ -760,7 +868,7 @@ class PowerMaxUtils(object):
         """Get the temporary group name used for failover.
 
         :param rep_config: the replication config
-        :return: temp_grp_name
+        :returns: temp_grp_name
         """
         temp_grp_name = ("OS-%(rdf)s-temp-rdf-sg"
                          % {'rdf': rep_config['rdf_group_label']})
@@ -768,15 +876,15 @@ class PowerMaxUtils(object):
                   {'name': temp_grp_name})
         return temp_grp_name
 
-    def get_child_sg_name(self, host_name, extra_specs):
+    def get_child_sg_name(self, host_name, extra_specs, port_group_label):
         """Get the child storage group name for a masking view.
 
         :param host_name: the short host name
         :param extra_specs: the extra specifications
-        :return: child sg name, compression flag, rep flag, short pg name
+        :param port_group_label: the port group label
+        :returns: child sg name, compression flag, rep flag, short pg name
         """
         do_disable_compression = False
-        pg_name = self.get_pg_short_name(extra_specs[PORTGROUPNAME])
         rep_enabled = self.is_replication_enabled(extra_specs)
         if extra_specs[SLO]:
             slo_wl_combo = self.truncate_string(
@@ -787,7 +895,7 @@ class PowerMaxUtils(object):
                 % {'shortHostName': host_name,
                    'srpName': unique_name,
                    'combo': slo_wl_combo,
-                   'pg': pg_name})
+                   'pg': port_group_label})
             do_disable_compression = self.is_compression_disabled(
                 extra_specs)
             if do_disable_compression:
@@ -796,11 +904,11 @@ class PowerMaxUtils(object):
         else:
             child_sg_name = (
                 "OS-%(shortHostName)s-No_SLO-%(pg)s"
-                % {'shortHostName': host_name, 'pg': pg_name})
+                % {'shortHostName': host_name, 'pg': port_group_label})
         if rep_enabled:
             rep_mode = extra_specs.get(REP_MODE, None)
             child_sg_name += self.get_replication_prefix(rep_mode)
-        return child_sg_name, do_disable_compression, rep_enabled, pg_name
+        return child_sg_name, do_disable_compression, rep_enabled
 
     @staticmethod
     def change_multiattach(extra_specs, new_type_extra_specs):
@@ -808,7 +916,7 @@ class PowerMaxUtils(object):
 
         :param extra_specs: the source type extra specs
         :param new_type_extra_specs: the target type extra specs
-        :return: bool
+        :returns: bool
         """
         is_src_multiattach = volume_utils.is_boolean_str(
             extra_specs.get('multiattach'))
@@ -821,7 +929,7 @@ class PowerMaxUtils(object):
         """Check if a volume with verbose description is valid for management.
 
         :param source_vol: the verbose volume dict
-        :return: bool True/False
+        :returns: bool True/False
         """
         vol_head = source_vol['volumeHeader']
 
@@ -852,7 +960,7 @@ class PowerMaxUtils(object):
         if source_vol['timeFinderInfo']['snapVXTgt'] is True:
             return False
 
-        if vol_head['nameModifier'][0:3] == 'OS-':
+        if vol_head['userDefinedIdentifier'][0:3] == 'OS-':
             return False
 
         return True
@@ -862,7 +970,7 @@ class PowerMaxUtils(object):
         """Check if a volume with snapshot description is valid for management.
 
         :param source_vol: the verbose volume dict
-        :return: bool True/False
+        :returns: bool True/False
         """
         vol_head = source_vol['volumeHeader']
 
@@ -894,18 +1002,66 @@ class PowerMaxUtils(object):
 
         return True
 
-    @staticmethod
-    def get_volume_attached_hostname(device_info):
-        """Parse a hostname from a storage group ID.
+    def get_volume_attached_hostname(self, volume):
+        """Get the host name from the attached volume
+
+        :param volume: the volume object
+        :returns: str -- the attached hostname
+        """
+        host_name_set = set()
+        attachment_list = volume.volume_attachment
+        LOG.debug("Volume attachment list: %(atl)s. "
+                  "Attachment type: %(at)s",
+                  {'atl': attachment_list, 'at': type(attachment_list)})
+
+        try:
+            att_list = attachment_list.objects
+        except AttributeError:
+            att_list = attachment_list
+        for att in att_list:
+            host_name_set.add(att.attached_host)
+
+        if host_name_set:
+            if len(host_name_set) > 1:
+                LOG.warning("Volume is attached to multiple instances "
+                            "on more than one compute node.")
+            else:
+                return host_name_set.pop()
+        return None
+
+    def get_rdf_managed_storage_group(self, device_info):
+        """Get the RDF managed storage group
 
         :param device_info: the device info dict
-        :return: str -- the attached hostname
+        :returns: str -- the attached hostname
+                 dict -- storage group details
         """
         try:
-            sg_id = device_info.get("storageGroupId")[0]
-            return sg_id.split('-')[1]
+            sg_list = device_info.get("storageGroupId")
+            for sg_id in sg_list:
+                sg_details = self.get_rdf_group_component_dict(sg_id)
+                if sg_details:
+                    return sg_id, sg_details
         except IndexError:
-            return None
+            return None, None
+        return None, None
+
+    def get_production_storage_group(self, device_info):
+        """Get the production storage group
+
+        :param device_info: the device info dict
+        :returns: str -- the storage group id
+                 dict -- storage group details
+        """
+        try:
+            sg_list = device_info.get("storageGroupId")
+            for sg_id in sg_list:
+                sg_details = self.get_storage_group_component_dict(sg_id)
+                if sg_details:
+                    return sg_id, sg_details
+        except IndexError:
+            return None, None
+        return None, None
 
     @staticmethod
     def validate_qos_input(input_key, sg_value, qos_extra_spec, property_dict):
@@ -955,11 +1111,84 @@ class PowerMaxUtils(object):
         return property_dict
 
     @staticmethod
+    def validate_multiple_rep_device(rep_devices):
+        """Validate the validity of multiple replication devices.
+
+        Validates uniqueness and presence of backend ids in rep_devices,
+        consistency in target arrays and replication modes when multiple
+        replication devices are present in cinder.conf.
+
+        :param rep_devices: rep_devices imported from cinder.conf --list
+        """
+        rdf_group_labels = set()
+        backend_ids = set()
+        rep_modes = set()
+        target_arrays = set()
+
+        repdev_count = len(rep_devices)
+        if repdev_count > 3:
+            msg = (_('Up to three replication_devices are currently '
+                     'supported, one for each replication mode. '
+                     '%d replication_devices found in cinder.conf.')
+                   % repdev_count)
+            raise exception.InvalidConfigurationValue(msg)
+
+        for rep_device in rep_devices:
+            backend_id = rep_device.get(BACKEND_ID)
+            if backend_id:
+                if backend_id in backend_ids:
+                    msg = (_('Backend IDs must be unique across all '
+                             'rep_device when multiple replication devices '
+                             'are defined in cinder.conf, backend_id %s is '
+                             'defined more than once.') % backend_id)
+                    raise exception.InvalidConfigurationValue(msg)
+            else:
+                msg = _('Backend IDs must be assigned for each rep_device '
+                        'when multiple replication devices are defined in '
+                        'cinder.conf.')
+                raise exception.InvalidConfigurationValue(msg)
+            backend_ids.add(backend_id)
+
+            rdf_group_label = rep_device.get('rdf_group_label')
+            if rdf_group_label in rdf_group_labels:
+                msg = (_('RDF Group Labels must be unique across all '
+                         'rep_device when multiple replication devices are '
+                         'defined in cinder.conf. RDF Group Label %s is '
+                         'defined more than once.') % rdf_group_label)
+                raise exception.InvalidConfigurationValue(msg)
+            rdf_group_labels.add(rdf_group_label)
+
+            rep_mode = rep_device.get('mode', '')
+            if rep_mode.lower() in ['async', 'asynchronous']:
+                rep_mode = REP_ASYNC
+            elif rep_mode.lower() == 'metro':
+                rep_mode = REP_METRO
+            else:
+                rep_mode = REP_SYNC
+            if rep_mode in rep_modes:
+                msg = (_('RDF Modes must be unique across all '
+                         'replication_device. Found multiple instances of %s '
+                         'mode defined in cinder.conf.') % rep_mode)
+                raise exception.InvalidConfigurationValue(msg)
+            rep_modes.add(rep_mode)
+
+            target_device_id = rep_device.get('target_device_id')
+            target_arrays.add(target_device_id)
+
+        target_arrays.discard(None)
+        if len(target_arrays) > 1:
+            msg = _('Found multiple target_device_id set in cinder.conf. A '
+                    'single target_device_id value must be used across all '
+                    'replication device when defining using multiple '
+                    'replication devices.')
+            raise exception.InvalidConfigurationValue(msg)
+
+    @staticmethod
     def compare_cylinders(cylinders_source, cylinder_target):
         """Compare number of cylinders of source and target.
 
         :param cylinders_source: number of cylinders on source
-        :param cylinders_target: number of cylinders on target
+        :param cylinder_target: number of cylinders on target
         """
         if float(cylinders_source) > float(cylinder_target):
             exception_message = (
@@ -977,7 +1206,7 @@ class PowerMaxUtils(object):
         """Get the service level and workload combination from extra specs.
 
         :param extra_specs: extra specifications
-        :return: string, string
+        :returns: string, string
         """
         service_level, workload = 'None', 'None'
         if extra_specs.get(SLO):
@@ -986,3 +1215,756 @@ class PowerMaxUtils(object):
                     and 'NONE' not in extra_specs.get(WORKLOAD)):
                 workload = extra_specs.get(WORKLOAD)
         return service_level, workload
+
+    def get_new_tags(self, list_str1, list_str2):
+        """Get elements in list_str1 not in list_str2
+
+        :param list_str1: list one in string format
+        :param list_str2: list two in string format
+        :returns: list
+        """
+        list_str1 = re.sub(r"\s+", "", list_str1)
+        if not list_str1:
+            return []
+        common_list = self._get_intersection(
+            list_str1, list_str2)
+
+        my_list1 = sorted(list_str1.split(","))
+        return [x for x in my_list1 if x.lower() not in common_list]
+
+    def verify_tag_list(self, tag_list):
+        """Verify that the tag list has allowable character
+
+        :param tag_list: list of tags
+        :returns: boolean
+        """
+        if not tag_list:
+            return False
+        if not isinstance(tag_list, list):
+            LOG.warning("The list of tags %(tag_list)s is not "
+                        "in list format. Tagging will not proceed.",
+                        {'tag_list': tag_list})
+            return False
+        if len(tag_list) > 8:
+            LOG.warning("The list of tags %(tag_list)s is more "
+                        "than the upper limit of 8. Tagging will not "
+                        "proceed.",
+                        {'tag_list': tag_list})
+            return False
+        for tag in tag_list:
+            tag = tag.strip()
+            if not re.match('^[a-zA-Z0-9_\\-]+$', tag):
+                return False
+        return True
+
+    def convert_list_to_string(self, list_input):
+        """Convert a list to a comma separated list
+
+        :param list_input: list
+        :returns: string or None
+        """
+        return ','.join(map(str, list_input)) if isinstance(
+            list_input, list) else list_input
+
+    def validate_short_host_name_from_template(
+            self, short_host_template, short_host_name):
+        """Validate that the short host name is in a format we can use.
+
+        Can be one of
+        shortHostName - where shortHostName is what the driver specifies
+        it to be, default
+        shortHostName[:x]uuid[:x] - where first x characters of the short
+        host name and x uuid characters created from md5 hash of
+        short host name
+        shortHostName[:x]userdef - where first x characters of the short
+        host name and a user defined name
+        shortHostName[-x:]uuid[:x] - where last x characters of short host
+        name and x uuid characters created from md5 hash of short host
+        name
+        shortHostName[-x:]suserdef - where last x characters of the short
+        host name and a user defined name
+
+        :param short_host_template: short host name template
+        :param short_host_name: short host name
+        :raises: VolumeBackendAPIException
+        :returns: new short host name -- string
+        """
+        new_short_host_name = None
+        is_ok, case = self.regex_check(short_host_template, True)
+        if is_ok:
+            new_short_host_name = (
+                self.generate_entity_string(
+                    case, short_host_template, short_host_name, True))
+        if not new_short_host_name:
+            error_message = (_('Unable to generate string from short '
+                               'host template %(template)s. Please refer to '
+                               'the online documentation for correct '
+                               'template format(s) for short host name.') %
+                             {'template': short_host_template})
+            LOG.error(error_message)
+            raise exception.VolumeBackendAPIException(
+                message=error_message)
+
+        return new_short_host_name
+
+    def validate_port_group_name_from_template(
+            self, port_group_template, port_group_name):
+        """Validate that the port group name is in a format we can use.
+
+        Can be one of
+        portGroupName - where portGroupName is what the driver specifies
+        it to be, default
+        portGroupName[:x]uuid[:x] - where first x characters of the short
+        host name and x uuid characters created from md5 hash of
+        short host name
+        portGroupName[:x]userdef - where first x characters of the short
+        host name and a user defined name
+        portGroupName[-x:]uuid[:x] - where last x characters of short host
+        name and x uuid characters created from md5 hash of short host
+        name
+        portGroupName[-x:]userdef - where last x characters of the short
+        host name and a user defined name
+
+        :param port_group_template: port group name template
+        :param port_group_name: port group name
+        :raises: VolumeBackendAPIException
+        :returns: new port group name -- string
+        """
+        new_port_group_name = None
+        is_ok, case = self.regex_check(port_group_template, False)
+        if is_ok:
+            new_port_group_name = (
+                self.generate_entity_string(
+                    case, port_group_template, port_group_name, False))
+
+        if not new_port_group_name:
+            error_message = (_('Unable to generate string from port group '
+                               'template %(template)s.  Please refer to '
+                               'the online documentation for correct '
+                               'template format(s) for port groups.') %
+                             {'template': port_group_template})
+            LOG.error(error_message)
+            raise exception.VolumeBackendAPIException(
+                message=error_message)
+
+        return new_port_group_name
+
+    def generate_entity_string(
+            self, case, entity_template, entity_name, entity_flag):
+        """Generate the entity string if the template checks out
+
+        :param case: one of five cases
+        :param entity_template: entity template
+        :param entity_name: entity name
+        :param entity_flag: storage group or port group flag
+        :returns: new entity name -- string
+        """
+        new_entity_name = None
+        override_rule_warning = False
+        try:
+            if case == '1':
+                new_entity_name = self.get_name_if_default_template(
+                    entity_name, entity_flag)
+            elif case == '2':
+                pass_two, uuid = self.prepare_string_with_uuid(
+                    entity_template, entity_name, entity_flag)
+                m = re.match(r'^' + entity_name +
+                             r'\[:(\d+)\]' + uuid + r'\[:(\d+)\]$', pass_two)
+                if m:
+                    num_1 = m.group(1)
+                    num_2 = m.group(2)
+                    self.check_upper_limit(
+                        int(num_1), int(num_2), entity_flag)
+                    new_entity_name = (
+                        entity_name[:int(num_1)] + uuid[:int(num_2)])
+                override_rule_warning = True
+            elif case == '3':
+                pass_two, uuid = self.prepare_string_with_uuid(
+                    entity_template, entity_name, entity_flag)
+                m = re.match(r'^' + entity_name +
+                             r'\[-(\d+):\]' + uuid + r'\[:(\d+)\]$', pass_two)
+                if m:
+                    num_1 = m.group(1)
+                    num_2 = m.group(2)
+                    self.check_upper_limit(
+                        int(num_1), int(num_2), entity_flag)
+                    new_entity_name = (
+                        entity_name[-int(num_1):] + uuid[:int(num_2)])
+                override_rule_warning = True
+            elif case == '4':
+                pass_two = self.prepare_string_entity(
+                    entity_template, entity_name, entity_flag)
+                m = re.match(r'^' + entity_name +
+                             r'\[:(\d+)\]' + r'([a-zA-Z0-9_\\-]+)$', pass_two)
+                if m:
+                    num_1 = m.group(1)
+                    user_defined = m.group(2)
+                    self.check_upper_limit(
+                        int(num_1), len(user_defined), entity_flag)
+                    new_entity_name = entity_name[:int(num_1)] + user_defined
+                override_rule_warning = True
+            elif case == '5':
+                pass_two = self.prepare_string_entity(
+                    entity_template, entity_name, entity_flag)
+                m = re.match(r'^' + entity_name +
+                             r'\[-(\d+):\]' + r'([a-zA-Z0-9_\\-]+)$', pass_two)
+                if m:
+                    num_1 = m.group(1)
+                    user_defined = m.group(2)
+                    self.check_upper_limit(
+                        int(num_1), len(user_defined), entity_flag)
+                    new_entity_name = entity_name[-int(num_1):] + user_defined
+                override_rule_warning = True
+            if override_rule_warning:
+                LOG.warning(
+                    "You have opted to override the %(entity)s naming format. "
+                    "Once changed and you have attached volumes or created "
+                    "new instances, you cannot revert to default or change to "
+                    "another format.",
+                    {'entity': 'storage group'
+                        if entity_flag else 'port group'})
+
+        except Exception:
+            new_entity_name = None
+        return new_entity_name
+
+    def get_name_if_default_template(self, entity_name, is_short_host_flag):
+        """Get the entity name if it is the default template
+
+        :param entity_name: the first number
+        :param is_short_host_flag: the second number
+        :returns: entity name -- string
+        """
+        if is_short_host_flag:
+            return self.get_host_short_name(entity_name)
+        else:
+            return self.get_pg_short_name(entity_name)
+
+    @staticmethod
+    def check_upper_limit(num_1, num_2, is_host_flag):
+        """Check that the sum of number is less than upper limit.
+
+        :param num_1: the first number
+        :param num_2: the second number
+        :param is_host_flag: is short host boolean
+        :raises: VolumeBackendAPIException
+        """
+        if is_host_flag:
+            if (num_1 + num_2) > UPPER_HOST_CHARS:
+                error_message = (_("Host name exceeds the character upper "
+                                   "limit of %(upper)d.  Please check your "
+                                   "short host template.") %
+                                 {'upper': UPPER_HOST_CHARS})
+                LOG.error(error_message)
+                raise exception.VolumeBackendAPIException(
+                    message=error_message)
+        else:
+            if (num_1 + num_2) > UPPER_PORT_GROUP_CHARS:
+                error_message = (_("Port group name exceeds the character "
+                                   "upper limit of %(upper)d. Please check "
+                                   "your port group template") %
+                                 {'upper': UPPER_PORT_GROUP_CHARS})
+                LOG.error(error_message)
+                raise exception.VolumeBackendAPIException(
+                    message=error_message)
+
+    def prepare_string_with_uuid(
+            self, template, entity_str, is_short_host_flag):
+        """Prepare string for pass three
+
+        :param template: the template
+        :param entity_str: the entity string
+        :param is_short_host_flag: is short host
+        :returns: pass_two -- string
+                  uuid -- string
+        """
+        pass_one = self.prepare_string_entity(
+            template, entity_str, is_short_host_flag)
+        uuid = self.get_uuid_of_input(entity_str)
+        pass_two = pass_one.replace('uuid', uuid)
+        return pass_two, uuid
+
+    @staticmethod
+    def prepare_string_entity(template, entity_str, is_host_flag):
+        """Prepare string for pass two
+
+        :param template: the template
+        :param entity_str: the entity string
+        :param is_host_flag: is host boolean
+        :returns: pass_one -- string
+        """
+        entity_type = 'shortHostName' if is_host_flag else 'portGroupName'
+        # Replace entity type with variable
+        return template.replace(
+            entity_type, entity_str)
+
+    @staticmethod
+    def regex_check(template, is_short_host_flag):
+        """Check the template is in a validate format.
+
+        :param template: short host name template
+        :param is_short_host_flag: short host boolean
+        :returns: boolean,
+                  case -- string
+        """
+        if is_short_host_flag:
+            entity = 'shortHostName'
+        else:
+            entity = 'portGroupName'
+        if re.match(r'^' + entity + r'$', template):
+            return True, '1'
+        elif re.match(r'^' + entity + r'\[:\d+\]uuid\[:\d+\]$', template):
+            return True, '2'
+        elif re.match(r'^' + entity + r'\[-\d+:\]uuid\[:\d+\]$', template):
+            return True, '3'
+        elif re.match(r'^' + entity + r'\[:\d+\][a-zA-Z0-9_\\-]+$', template):
+            return True, '4'
+        elif re.match(r'^' + entity + r'\[-\d+:\][a-zA-Z0-9_\\-]+$',
+                      template):
+            return True, '5'
+        return False, '0'
+
+    def get_host_name_label(self, host_name_in, host_template):
+        """Get the host name label that will be used in PowerMax Objects
+
+        :param host_name_in: host name as portrayed in connector object
+        :param host_template:
+        :returns: host_name_out
+        """
+        host_name_out = self.get_host_short_name(
+            host_name_in)
+        if host_template:
+            short_host_name = self.get_host_short_name_from_fqn(
+                host_name_in)
+            host_name_out = (
+                self.validate_short_host_name_from_template(
+                    host_template, short_host_name))
+        return host_name_out
+
+    def get_port_name_label(self, port_name_in, port_group_template):
+        """Get the port name label that will be used in PowerMax Objects
+
+        :rtype: object
+        :param host_name_in: host name as portrayed in connector object
+        :param port_group_template: port group template
+        :returns: port_name_out
+        """
+        port_name_out = self.get_pg_short_name(port_name_in)
+        if port_group_template:
+            port_name_out = (
+                self.validate_port_group_name_from_template(
+                    port_group_template, port_name_in))
+        return port_name_out
+
+    def get_storage_group_component_dict(self, storage_group_name):
+        """Parse the storage group string.
+
+        :param storage_group_name: the storage group name -- str
+        :returns: object components -- dict
+        """
+        regex_str = (r'^(?P<prefix>OS)-(?P<host>.+?)'
+                     r'((?P<no_slo>No_SLO)|((?P<srp>SRP.+?)-'
+                     r'(?P<sloworkload>.+?)))-(?P<portgroup>.+?)'
+                     r'(?P<after_pg>$|-CD|-RE|-RA|-RM)')
+        return self.get_object_components_and_correct_host(
+            regex_str, storage_group_name)
+
+    def get_rdf_group_component_dict(self, storage_group_name):
+        """Parse the storage group string.
+
+        :param storage_group_name: the storage group name -- str
+        :returns: object components -- dict
+        """
+        regex_str = (r'^(?P<prefix>OS)-(?P<rdf_label>.+?)-'
+                     r'(?P<sync_mode>Asynchronous|Metro)-'
+                     r'(?P<after_mode>rdf-sg)$')
+        return self.get_object_components(
+            regex_str, storage_group_name)
+
+    def get_object_components_and_correct_host(self, regex_str, input_str):
+        """Get components from input string.
+
+        :param regex_str: the regex -- str
+        :param input_str: the input string -- str
+        :returns: object components -- dict
+        """
+        object_dict = self.get_object_components(regex_str, input_str)
+        if object_dict and 'host' in object_dict:
+            if object_dict['host'].endswith('-'):
+                object_dict['host'] = object_dict['host'][:-1]
+        return object_dict
+
+    @staticmethod
+    def get_object_components(regex_str, input_str):
+        """Get components from input string.
+
+        :param regex_str: the regex -- str
+        :param input_str: the input string -- str
+        :returns: dict
+        """
+        full_str = re.compile(regex_str)
+        match = full_str.match(input_str)
+        return match.groupdict() if match else None
+
+    def get_possible_initiator_name(self, host_label, protocol):
+        """Get possible initiator name based on the host
+
+        :param host_label: the host label -- str
+        :param protocol: the protocol -- str
+        :returns: initiator_group_name -- str
+        """
+        protocol = self.get_short_protocol_type(protocol)
+        return ("OS-%(shortHostName)s-%(protocol)s-IG"
+                % {'shortHostName': host_label,
+                   'protocol': protocol})
+
+    @staticmethod
+    def delete_values_from_dict(datadict, key_list):
+        """Delete values from a dict
+
+        :param datadict: dictionary
+        :param key_list: list of keys
+        :returns: dict
+        """
+        for key in key_list:
+            if datadict.get(key):
+                del datadict[key]
+        return datadict
+
+    @staticmethod
+    def update_values_in_dict(datadict, tuple_list):
+        """Delete values from a dict
+
+        :param datadict: dictionary
+        :param tuple_list: list of tuples
+        :returns: dict
+        """
+        for tuple in tuple_list:
+            if datadict.get(tuple[0]):
+                datadict.update({tuple[1]: datadict.get(tuple[0])})
+                del datadict[tuple[0]]
+        return datadict
+
+    @staticmethod
+    def _get_intersection(list_str1, list_str2):
+        """Get the common values between 2 comma separated list
+
+        :param list_str1: list one
+        :param list_str2: list two
+        :returns: sorted list
+        """
+        list_str1 = re.sub(r"\s+", "", list_str1).lower()
+        list_str2 = re.sub(r"\s+", "", list_str2).lower()
+        my_list1 = sorted(list_str1.split(","))
+        my_list2 = sorted(list_str2.split(","))
+        sorted_common_list = (
+            sorted(list(set(my_list1).intersection(set(my_list2)))))
+        return sorted_common_list
+
+    @staticmethod
+    def get_unique_device_ids_from_lists(list_a, list_b):
+        """Get the unique values from list B that don't appear in list A.
+
+        :param list_a: list A
+        :param list_b: list B
+        :returns: values unique between two lists -- list
+        """
+        set_a = set(list_a)
+        return [dev_id for dev_id in list_b if dev_id not in set_a]
+
+    @staticmethod
+    def update_payload_for_rdf_vol_create(payload, remote_array_id,
+                                          storage_group_name):
+        """Construct the REST payload for creating RDF enabled volumes.
+
+        :param payload: the existing payload -- dict
+        :param remote_array_id: the remote array serial number -- str
+        :param storage_group_name: the storage group name -- str
+        :returns: updated payload -- dict
+        """
+        remote_dict = {"remoteSymmSGInfoParam": {
+            "remote_symmetrix_1_id": remote_array_id,
+            "remote_symmetrix_1_sgs": [storage_group_name],
+            "force": "true"}}
+
+        payload["editStorageGroupActionParam"]["expandStorageGroupParam"][
+            "addVolumeParam"].update(remote_dict)
+
+        return payload
+
+    @staticmethod
+    def is_retype_supported(volume, src_extra_specs, tgt_extra_specs,
+                            rep_configs):
+        """Determine if a retype operation involving Metro is supported.
+
+        :param volume: the volume object -- obj
+        :param src_extra_specs: the source extra specs -- dict
+        :param tgt_extra_specs: the target extra specs -- dict
+        :param rep_configs: imported cinder.conf replication devices -- dict
+        :returns: is supported -- bool
+        """
+        if volume.attach_status == 'detached':
+            return True
+
+        src_rep_mode = src_extra_specs.get('rep_mode', None)
+        tgt_rep_mode = None
+        if PowerMaxUtils.is_replication_enabled(tgt_extra_specs):
+            target_backend_id = tgt_extra_specs.get(
+                REPLICATION_DEVICE_BACKEND_ID, BACKEND_ID_LEGACY_REP)
+            target_rep_config = PowerMaxUtils.get_rep_config(
+                target_backend_id, rep_configs)
+            tgt_rep_mode = target_rep_config.get('mode', REP_SYNC)
+
+        if tgt_rep_mode != REP_METRO:
+            return True
+        else:
+            if src_rep_mode == REP_METRO:
+                return True
+            else:
+                if not src_rep_mode or src_rep_mode in [REP_SYNC, REP_ASYNC]:
+                    return False
+
+    @staticmethod
+    def get_rep_config(backend_id, rep_configs):
+        """Get rep_config for given backend_id.
+
+        :param backend_id: rep config search key -- str
+        :param rep_configs: backend rep_configs -- list
+        :returns: rep_config -- dict
+        """
+        if len(rep_configs) == 1:
+            rep_device = rep_configs[0]
+        else:
+            rep_device = None
+            for rep_config in rep_configs:
+                if rep_config[BACKEND_ID] == backend_id:
+                    rep_device = rep_config
+            if rep_device is None:
+                msg = (_('Could not find a replication_device with a '
+                         'backend_id of "%s" in cinder.conf. Please confirm '
+                         'that the replication_device_backend_id extra spec '
+                         'for this volume type matches the backend_id of the '
+                         'intended replication_device in '
+                         'cinder.conf.') % backend_id)
+                if BACKEND_ID_LEGACY_REP in msg:
+                    msg = (_('Could not find replication_device. Legacy '
+                             'replication_device key found, please ensure the '
+                             'backend_id for the legacy replication_device in '
+                             'cinder.conf has been changed to '
+                             '"%s".') % BACKEND_ID_LEGACY_REP)
+                LOG.error(msg)
+                raise exception.InvalidInput(msg)
+        return rep_device
+
+    @staticmethod
+    def get_replication_targets(rep_configs):
+        """Set the replication targets for the backend.
+
+        :param rep_configs: backend rep_configs -- list
+        :returns: arrays configured for replication -- list
+        """
+        replication_targets = set()
+        if rep_configs:
+            for rep_config in rep_configs:
+                array = rep_config.get(ARRAY)
+                if array:
+                    replication_targets.add(array)
+        return list(replication_targets)
+
+    def validate_failover_request(self, is_failed_over, failover_backend_id,
+                                  rep_configs):
+        """Validate failover_host request's parameters
+
+        Validate that a failover_host operation can be performed with
+        the user entered parameters and system configuration/state
+
+        :param is_failed_over: current failover state
+        :param failover_backend_id: backend_id given during failover request
+        :param rep_configs: backend rep_configs -- list
+        :return: (bool, str) is valid, reason on invalid
+        """
+        is_valid = True
+        msg = ""
+        if is_failed_over:
+            if failover_backend_id != 'default':
+                is_valid = False
+                msg = _('Cannot failover, the backend is already in a failed '
+                        'over state, if you meant to failback, please add '
+                        '--backend_id default to the command.')
+        else:
+            if failover_backend_id == 'default':
+                is_valid = False
+                msg = _('Cannot failback, backend is not in a failed over '
+                        'state. If you meant to failover, please either omit '
+                        'the --backend_id parameter or use the --backend_id '
+                        'parameter with a valid backend id.')
+            elif len(rep_configs) > 1:
+                if failover_backend_id is None:
+                    is_valid = False
+                    msg = _('Cannot failover, no backend_id provided while '
+                            'multiple replication devices are defined in '
+                            'cinder.conf, please provide a backend_id '
+                            'which will act as new primary array by '
+                            'appending --backend_id <id> to your command.')
+                else:
+                    rc = self.get_rep_config(failover_backend_id, rep_configs)
+                    if rc is None:
+                        is_valid = False
+                        msg = _('Can not find replication device with '
+                                'backend_id of %s') % failover_backend_id
+        return is_valid, msg
+
+    def validate_replication_group_config(self, rep_configs, extra_specs_list):
+        """Validate replication group configuration
+
+        Validate the extra specs of volume types being added to
+        a volume group against rep_config imported from cinder.conf
+
+        :param rep_configs: list of replication_device dicts from cinder.conf
+        :param extra_specs_list: extra_specs of volume types added to group
+        :raises InvalidInput: If any of the validation check fail
+        """
+        if not rep_configs:
+            LOG.error('No replication devices set in cinder.conf please '
+                      'disable replication in Volume Group extra specs '
+                      'or add replication device to cinder.conf.')
+            msg = _('No replication devices are defined in cinder.conf, '
+                    'can not enable volume group replication.')
+            raise exception.InvalidInput(reason=msg)
+
+        rep_group_backend_ids = set()
+        for extra_specs in extra_specs_list:
+            target_backend_id = extra_specs.get(
+                REPLICATION_DEVICE_BACKEND_ID,
+                BACKEND_ID_LEGACY_REP)
+            try:
+                target_rep_config = self.get_rep_config(
+                    target_backend_id, rep_configs)
+                rep_group_backend_ids.add(target_backend_id)
+            except exception.InvalidInput:
+                target_rep_config = None
+
+            if not (extra_specs.get(IS_RE) == '<is> True'):
+                # Replication is disabled or not set to correct value
+                # in the Volume Type being added
+                msg = _('Replication is not enabled for a Volume Type, '
+                        'all Volume Types in a replication enabled '
+                        'Volume Group must have replication enabled.')
+                raise exception.InvalidInput(reason=msg)
+
+            if not target_rep_config:
+                # Unable to determine rep_configs to use.
+                msg = _('Unable to determine which rep_device to use from '
+                        'cinder.conf. Could not validate volume types being '
+                        'added to group.')
+                raise exception.InvalidInput(reason=msg)
+
+            # Verify that replication is Synchronous mode
+            if not target_rep_config.get('mode'):
+                LOG.warning('Unable to verify the replication mode '
+                            'of Volume Type, please ensure only '
+                            'Synchronous replication is used.')
+            elif not target_rep_config['mode'] == REP_SYNC:
+                msg = _('Replication for Volume Type is not set '
+                        'to Synchronous. Only Synchronous '
+                        'can be used with replication groups')
+                raise exception.InvalidInput(reason=msg)
+
+        if len(rep_group_backend_ids) > 1:
+            # We should only have a single backend_id
+            # (replication type) across all the Volume Types
+            msg = _('Multiple replication backend ids detected '
+                    'please ensure only a single replication device '
+                    '(backend_id) is used for all Volume Types in a '
+                    'Volume Group.')
+            raise exception.InvalidInput(reason=msg)
+
+    @staticmethod
+    def validate_non_replication_group_config(extra_specs_list):
+        """Validate volume group configuration
+
+        Validate that none of the Volume Type extra specs are
+        replication enabled.
+
+        :param extra_specs_list: list of Volume Type extra specs
+        :return: bool replication enabled found in any extra specs
+        """
+        for extra_specs in extra_specs_list:
+            if extra_specs.get(IS_RE) == '<is> True':
+                msg = _('Replication is enabled in one or more of the '
+                        'Volume Types being added to new Volume Group but '
+                        'the Volume Group is not replication enabled. Please '
+                        'enable replication in the Volume Group or select '
+                        'only non-replicated Volume Types.')
+                raise exception.InvalidInput(reason=msg)
+
+    @staticmethod
+    def get_migration_delete_extra_specs(volume, extra_specs, rep_configs):
+        """Get previous extra specs rep details during migration delete
+
+        :param volume: volume object -- volume
+        :param extra_specs: volumes extra specs -- dict
+        :param rep_configs: imported cinder.conf replication devices -- dict
+        :returns: updated extra specs -- dict
+        """
+        metadata = volume.metadata
+        replication_enabled = strutils.bool_from_string(
+            metadata.get(IS_RE_CAMEL, 'False'))
+        if replication_enabled:
+            rdfg_label = metadata['RDFG-Label']
+            rep_config = next(
+                (r_c for r_c in rep_configs if r_c[
+                    'rdf_group_label'] == rdfg_label), None)
+
+            extra_specs[IS_RE] = replication_enabled
+            extra_specs[REP_MODE] = metadata['ReplicationMode']
+            extra_specs[REP_CONFIG] = rep_config
+            extra_specs[REPLICATION_DEVICE_BACKEND_ID] = rep_config[BACKEND_ID]
+        else:
+            extra_specs.pop(IS_RE, None)
+        return extra_specs
+
+    @staticmethod
+    def version_meet_req(version, minimum_version):
+        """Check if current version meets the minimum version allowed
+
+        :param version: unisphere version
+        :param minimum_version: minimum version allowed
+        :returns: boolean
+        """
+        from pkg_resources import parse_version
+        return parse_version(version) >= parse_version(minimum_version)
+
+    @staticmethod
+    def parse_specs_from_pool_name(pool_name):
+        """Parse basic volume type specs from pool_name.
+
+        :param pool_name: the pool name -- str
+        :returns: array_id, srp, service_level, workload -- str, str, str, str
+        """
+        array_id, srp, service_level, workload = '', '', '', ''
+        pool_details = pool_name.split('+')
+        if len(pool_details) == 4:
+            array_id = pool_details[3]
+            srp = pool_details[2]
+            service_level = pool_details[0]
+            if not pool_details[1].lower() == 'none':
+                workload = pool_details[1]
+        elif len(pool_details) == 3:
+            service_level = pool_details[0]
+            srp = pool_details[1]
+            array_id = pool_details[2]
+        else:
+            if not pool_name:
+                msg = _("No pool_name specified in volume-type.")
+            else:
+                msg = (_("There has been a problem parsing the pool "
+                         "information from pool_name '%(pool)s'.") % {
+                             'pool': pool_name})
+
+            raise exception.VolumeBackendAPIException(msg)
+
+        if service_level.lower() == 'none':
+            service_level = ''
+
+        return array_id, srp, service_level, workload

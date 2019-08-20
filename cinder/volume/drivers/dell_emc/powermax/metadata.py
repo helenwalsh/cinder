@@ -293,6 +293,7 @@ class PowerMaxVolumeMetadata(object):
         mv_list, sg_list = [], []
         child_storage_group, parent_storage_group = None, None
         initiator_group, port_group = None, None
+        child_storage_group_tag_list = None
 
         if is_multiattach:
             successful_operation = 'multi_attach'
@@ -301,6 +302,8 @@ class PowerMaxVolumeMetadata(object):
         else:
             successful_operation = 'attach'
             child_storage_group = masking_view_dict[utils.SG_NAME]
+            child_storage_group_tag_list = (
+                masking_view_dict.get(utils.TAG_LIST, None))
             parent_storage_group = masking_view_dict[utils.PARENT_SG_NAME]
             initiator_group = masking_view_dict[utils.IG_NAME]
             port_group = masking_view_dict[utils.PORTGROUPNAME]
@@ -315,10 +318,13 @@ class PowerMaxVolumeMetadata(object):
             parent_storage_group=parent_storage_group,
             initiator_group=initiator_group,
             port_group=port_group,
-            host=host, is_multipath=is_multipath,
+            host=host, used_host_name=masking_view_dict[utils.USED_HOST_NAME],
+            is_multipath=is_multipath,
             identifier_name=self.utils.get_volume_element_name(volume.id),
             openstack_name=volume.display_name,
-            mv_list=mv_list, sg_list=sg_list)
+            mv_list=mv_list, sg_list=sg_list,
+            child_storage_group_tag_list=child_storage_group_tag_list,
+            array_tag_list=masking_view_dict.get('array_tag_list', None))
 
         volume_metadata = self.update_volume_info_metadata(
             datadict, self.version_dict)
@@ -446,7 +452,8 @@ class PowerMaxVolumeMetadata(object):
     def capture_create_volume(
             self, device_id, volume, group_name, group_id, extra_specs,
             rep_info_dict, successful_operation, source_snapshot_id=None,
-            source_device_id=None, temporary_snapvx=None):
+            source_device_id=None, temporary_snapvx=None,
+            array_tag_list=None):
         """Captures create volume info in volume metadata
 
         :param device_id: device id
@@ -457,6 +464,8 @@ class PowerMaxVolumeMetadata(object):
         :param rep_info_dict: information gathered from replication
         :param successful_operation: the type of create operation
         :param source_snapshot_id: the source snapshot id
+        :param temporary_snapvx: temporary snapVX
+        :param array_tag_list: array tag list
 
         :returns: volume_metadata dict
         """
@@ -464,18 +473,20 @@ class PowerMaxVolumeMetadata(object):
             None, None, None, None)
         rep_mode, replication_status, rdf_group_label, use_bias = (
             None, None, None, None)
-        target_array_model = None
+        target_array_model, backend_id = None, None
         if rep_info_dict:
-            rdf_group_no = rep_info_dict['rdf_group_no']
-            target_name = rep_info_dict['target_name']
-            remote_array = rep_info_dict['remote_array']
-            target_device_id = rep_info_dict['target_device_id']
-            rep_mode = rep_info_dict['rep_mode']
-            replication_status = rep_info_dict['replication_status']
-            rdf_group_label = rep_info_dict['rdf_group_label']
+            rdf_group_no = rep_info_dict.get('rdf_group_no')
+            target_name = rep_info_dict.get('target_name')
+            remote_array = rep_info_dict.get('remote_array')
+            target_device_id = rep_info_dict.get('target_device_id')
+            rep_mode = rep_info_dict.get('rep_mode')
+            replication_status = rep_info_dict.get('replication_status')
+            rdf_group_label = rep_info_dict.get('rdf_group_label')
+            backend_id = rep_info_dict.get('backend_id')
+
             if utils.METROBIAS in extra_specs:
                 use_bias = extra_specs[utils.METROBIAS]
-            target_array_model = rep_info_dict['target_array_model']
+            target_array_model = rep_info_dict.get('target_array_model')
 
         default_sg = self.utils.derive_default_sg_from_extra_specs(
             extra_specs, rep_mode)
@@ -491,7 +502,7 @@ class PowerMaxVolumeMetadata(object):
             openstack_name=volume.display_name,
             source_volid=volume.source_volid,
             group_name=group_name, group_id=group_id,
-            rdf_group_no=rdf_group_no,
+            rdf_group_no=rdf_group_no, backend_id=backend_id,
             target_name=target_name, remote_array=remote_array,
             target_device_id=target_device_id,
             source_snapshot_id=source_snapshot_id,
@@ -501,7 +512,8 @@ class PowerMaxVolumeMetadata(object):
                 extra_specs),
             source_device_id=source_device_id,
             temporary_snapvx=temporary_snapvx,
-            target_array_model=target_array_model)
+            target_array_model=target_array_model,
+            array_tag_list=array_tag_list)
         volume_metadata = self.update_volume_info_metadata(
             datadict, self.version_dict)
         self.print_pretty_table(volume_metadata)
@@ -574,8 +586,8 @@ class PowerMaxVolumeMetadata(object):
         successful_operation = "manage_existing_volume"
         rdf_group_no, target_name, remote_array, target_device_id = (
             None, None, None, None)
-        rep_mode, replication_status, rdf_group_label = (
-            None, None, None)
+        rep_mode, replication_status, rdf_group_label, backend_id = (
+            None, None, None, None)
         if rep_info_dict:
             rdf_group_no = rep_info_dict['rdf_group_no']
             target_name = rep_info_dict['target_name']
@@ -584,6 +596,7 @@ class PowerMaxVolumeMetadata(object):
             rep_mode = rep_info_dict['rep_mode']
             replication_status = rep_info_dict['replication_status']
             rdf_group_label = rep_info_dict['rdf_group_label']
+            backend_id = rep_info_dict['backend_id']
 
         default_sg = self.utils.derive_default_sg_from_extra_specs(
             extra_specs, rep_mode)
@@ -598,7 +611,7 @@ class PowerMaxVolumeMetadata(object):
             identifier_name=self.utils.get_volume_element_name(volume.id),
             openstack_name=volume.display_name,
             source_volid=volume.source_volid,
-            rdf_group_no=rdf_group_no,
+            rdf_group_no=rdf_group_no, backend_id=backend_id,
             target_name=target_name, remote_array=remote_array,
             target_device_id=target_device_id,
             rep_mode=rep_mode, replication_status=replication_status,
@@ -612,7 +625,7 @@ class PowerMaxVolumeMetadata(object):
     def capture_retype_info(
             self, volume, device_id, array, srp, target_slo,
             target_workload, target_sg_name, is_rep_enabled, rep_mode,
-            is_compression_disabled):
+            is_compression_disabled, target_backend_id):
         """Captures manage existing info in volume metadata
 
         :param volume_id: volume identifier
@@ -625,6 +638,7 @@ class PowerMaxVolumeMetadata(object):
         :param is_rep_enabled: replication enabled flag
         :param rep_mode: replication mode
         :param is_compression_disabled: compression disabled flag
+        :param target_backend_id: target replication backend id
         """
         successful_operation = "retype"
         if not target_slo:
@@ -640,8 +654,19 @@ class PowerMaxVolumeMetadata(object):
             identifier_name=self.utils.get_volume_element_name(volume.id),
             openstack_name=volume.display_name,
             is_rep_enabled=('yes' if is_rep_enabled else 'no'),
-            rep_mode=rep_mode, is_compression_disabled=(
+            backend_id=target_backend_id, rep_mode=rep_mode,
+            is_compression_disabled=(
                 True if is_compression_disabled else False))
+        if not is_rep_enabled:
+            delete_list = ['rdf_group_no', 'rep_mode', 'target_array_model',
+                           'service_level', 'remote_array', 'target_device_id',
+                           'replication_status', 'rdf_group_label',
+                           'backend_id']
+            self.utils.delete_values_from_dict(datadict, delete_list)
+            update_list = [('default_sg_name', 'source_sg_name'),
+                           ('service_level', 'source_service_level')]
+            self.utils.update_values_in_dict(datadict, update_list)
+
         volume_metadata = self.update_volume_info_metadata(
             datadict, self.version_dict)
         self.print_pretty_table(volume_metadata)

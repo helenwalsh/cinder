@@ -37,12 +37,14 @@ class PowerMaxData(object):
     array_herc = '000197900123'
     array_model = 'PowerMax_8000'
     srp = 'SRP_1'
-    srp2 = 'SRP_2'
     slo = 'Diamond'
+    slo_diamond = 'Diamond'
+    slo_silver = 'Silver'
     workload = 'DSS'
     port_group_name_f = 'OS-fibre-PG'
     port_group_name_i = 'OS-iscsi-PG'
     masking_view_name_f = 'OS-HostX-F-OS-fibre-PG-MV'
+    masking_view_name_Y_f = 'OS-HostY-F-OS-fibre-PG-MV'
     masking_view_name_i = 'OS-HostX-SRP_1-I-OS-iscsi-PG-MV'
     initiatorgroup_name_f = 'OS-HostX-F-IG'
     initiatorgroup_name_i = 'OS-HostX-I-IG'
@@ -55,6 +57,7 @@ class PowerMaxData(object):
     default_sg_no_slo = 'OS-no_SLO-SG'
     default_sg_compr_disabled = 'OS-SRP_1-Diamond-DSS-CD-SG'
     default_sg_re_enabled = 'OS-SRP_1-Diamond-DSS-RE-SG'
+    default_sg_no_slo_re_enabled = 'OS-SRP_1-Diamond-NONE-RE-SG'
     failed_resource = 'OS-failed-resource'
     fake_host = 'HostX@Backend#Diamond+DSS+SRP_1+000197800123'
     new_host = 'HostX@Backend#Silver+OLTP+SRP_1+000197800123'
@@ -66,20 +69,28 @@ class PowerMaxData(object):
     device_id2 = '00002'
     device_id3 = '00003'
     device_id4 = '00004'
-    rdf_group_name = '23_24_007'
-    rdf_group_no = '70'
+    rdf_group_name_1 = '23_24_007'
+    rdf_group_name_2 = '23_24_008'
+    rdf_group_name_3 = '23_24_009'
+    rdf_group_name_4 = '23_24_010'
+    rdf_group_no_1 = '70'
+    rdf_group_no_2 = '71'
+    rdf_group_no_3 = '72'
+    rdf_group_no_4 = '73'
     u4v_version = '91'
     storagegroup_name_source = 'Grp_source_sg'
     storagegroup_name_target = 'Grp_target_sg'
     group_snapshot_name = 'Grp_snapshot'
     target_group_name = 'Grp_target'
     storagegroup_name_with_id = 'GrpId_group_name'
-    rdf_managed_async_grp = 'OS-%s-Asynchronous-rdf-sg' % rdf_group_name
+    rdf_managed_async_grp = 'OS-%s-Asynchronous-rdf-sg' % rdf_group_name_1
+    default_sg_re_managed_list = [default_sg_re_enabled, rdf_managed_async_grp]
     volume_id = '2b06255d-f5f0-4520-a953-b029196add6a'
     no_slo_sg_name = 'OS-HostX-No_SLO-OS-fibre-PG'
     temp_snapvx = 'temp-00001-snapshot_for_clone'
     next_gen_ucode = 5978
     gvg_group_id = 'test-gvg'
+    sg_tags = 'production,test'
 
     # connector info
     wwpn1 = '123456789012345'
@@ -126,7 +137,8 @@ class PowerMaxData(object):
                          'is_multipath': True,
                          'array': array,
                          'controller': {'host': '10.00.00.00'},
-                         'hostlunid': 3}
+                         'hostlunid': 3,
+                         'device_id': device_id}
     iscsi_device_info_metro = deepcopy(iscsi_device_info)
     iscsi_device_info_metro['metro_ip_and_iqn'] = [{'ip': ip2, 'iqn': iqn2}]
     iscsi_device_info_metro['metro_hostlunid'] = 2
@@ -169,6 +181,11 @@ class PowerMaxData(object):
 
     provider_location5 = {'array': remote_array,
                           'device_id': device_id}
+
+    replication_update = (
+        {'replication_status': 'enabled',
+         'replication_driver_data': six.text_type(
+             {'array': remote_array, 'device_id': device_id2})})
 
     legacy_provider_location = {
         'classname': 'Symm_StorageVolume',
@@ -248,21 +265,120 @@ class PowerMaxData(object):
 
     test_volume_attachment = volume_attachment.VolumeAttachment(
         id='2b06255d-f5f0-4520-a953-b029196add6b', volume_id=test_volume.id,
-        connector=connector)
+        connector=connector, attached_host='HostX')
 
     location_info = {'location_info': '000197800123#SRP_1#Diamond#DSS',
                      'storage_protocol': 'FC'}
     test_host = {'capabilities': location_info,
                  'host': fake_host}
 
+    # replication
+    rep_backend_id_sync = 'rep_backend_id_sync'
+    rep_backend_id_async = 'rep_backend_id_async'
+    rep_backend_id_metro = 'rep_backend_id_metro'
+    rep_backend_id_sync_2 = 'rep_backend_id_sync_2'
+
+    rep_dev_1 = {
+        utils.BACKEND_ID: rep_backend_id_sync,
+        'target_device_id': remote_array,
+        'remote_port_group': port_group_name_f,
+        'remote_pool': srp,
+        'rdf_group_label': rdf_group_name_1,
+        'mode': utils.REP_SYNC,
+        'allow_extend': True}
+    rep_dev_2 = {
+        utils.BACKEND_ID: rep_backend_id_async,
+        'target_device_id': remote_array,
+        'remote_port_group': port_group_name_f,
+        'remote_pool': srp,
+        'rdf_group_label': rdf_group_name_2,
+        'mode': utils.REP_ASYNC,
+        'allow_extend': True}
+    rep_dev_3 = {
+        utils.BACKEND_ID: rep_backend_id_metro,
+        'target_device_id': remote_array,
+        'remote_port_group': port_group_name_f,
+        'remote_pool': srp,
+        'rdf_group_label': rdf_group_name_3,
+        'mode': utils.REP_METRO,
+        'allow_extend': True}
+    sync_rep_device = [rep_dev_1]
+    async_rep_device = [rep_dev_2]
+    metro_rep_device = [rep_dev_3]
+    multi_rep_device = [rep_dev_1, rep_dev_2, rep_dev_3]
+
+    rep_config_sync = {
+        utils.BACKEND_ID: rep_backend_id_sync,
+        'array': remote_array,
+        'portgroup': port_group_name_f,
+        'srp': srp,
+        'rdf_group_label': rdf_group_name_1,
+        'mode': utils.REP_SYNC,
+        'allow_extend': True,
+        'sync_interval': 3,
+        'sync_retries': 200}
+    rep_config_async = {
+        utils.BACKEND_ID: rep_backend_id_async,
+        'array': remote_array,
+        'portgroup': port_group_name_f,
+        'srp': srp,
+        'rdf_group_label': rdf_group_name_2,
+        'mode': utils.REP_ASYNC,
+        'allow_extend': True,
+        'sync_interval': 3,
+        'sync_retries': 200}
+    rep_config_metro = {
+        utils.BACKEND_ID: rep_backend_id_metro,
+        'array': remote_array,
+        'portgroup': port_group_name_f,
+        'srp': srp,
+        'rdf_group_label': rdf_group_name_3,
+        'mode': utils.REP_METRO,
+        'allow_extend': True,
+        'sync_interval': 3,
+        'sync_retries': 200}
+    rep_config_sync_2 = {
+        utils.BACKEND_ID: rep_backend_id_sync_2,
+        'array': remote_array,
+        'portgroup': port_group_name_f,
+        'srp': srp,
+        'rdf_group_label': rdf_group_name_1,
+        'mode': utils.REP_SYNC,
+        'allow_extend': True,
+        'sync_interval': 3,
+        'sync_retries': 200}
+    sync_rep_config_list = [rep_config_sync]
+    async_rep_config_list = [rep_config_async]
+    metro_rep_config_list = [rep_config_metro]
+    multi_rep_config_list = [rep_config_sync, rep_config_async,
+                             rep_config_metro, rep_config_sync_2]
+
     # extra-specs
     vol_type_extra_specs = {'pool_name': u'Diamond+DSS+SRP_1+000197800123'}
+    vol_type_extra_specs_none_pool = {
+        'pool_name': u'None+NONE+SRP_1+000197800123'}
+    vol_type_extra_specs_optimised_pool = {
+        'pool_name': u'Optimized+NONE+SRP_1+000197800123'}
+    vol_type_extra_specs_next_gen_pool = {
+        'pool_name': u'Optimized+SRP_1+000197800123'}
     vol_type_extra_specs_compr_disabled = {
         'pool_name': u'Diamond+DSS+SRP_1+000197800123',
         'storagetype:disablecompression': 'true'}
     vol_type_extra_specs_rep_enabled = {
         'pool_name': u'Diamond+DSS+SRP_1+000197800123',
         'replication_enabled': '<is> True'}
+    vol_type_extra_specs_rep_enabled_backend_id_sync = {
+        'pool_name': u'Diamond+DSS+SRP_1+000197800123',
+        'replication_enabled': '<is> True',
+        utils.REPLICATION_DEVICE_BACKEND_ID: rep_backend_id_sync}
+    vol_type_extra_specs_rep_enabled_backend_id_sync_2 = {
+        'pool_name': u'Diamond+DSS+SRP_1+000197800123',
+        'replication_enabled': '<is> True',
+        utils.REPLICATION_DEVICE_BACKEND_ID: rep_backend_id_sync_2}
+    vol_type_extra_specs_rep_enabled_backend_id_async = {
+        'pool_name': u'Diamond+DSS+SRP_1+000197800123',
+        'replication_enabled': '<is> True',
+        utils.REPLICATION_DEVICE_BACKEND_ID: rep_backend_id_async}
     extra_specs = {'pool_name': u'Diamond+DSS+SRP_1+000197800123',
                    'slo': slo,
                    'workload': workload,
@@ -270,7 +386,17 @@ class PowerMaxData(object):
                    'array': array,
                    'interval': 3,
                    'retries': 120}
+    extra_specs_optimized = {
+        'pool_name': u'Optimized+None+SRP_1+000197800123',
+        'slo': 'Optimized', 'workload': 'None',
+        'srp': srp, 'array': array, 'interval': 3, 'retries': 120}
 
+    vol_type_extra_specs_tags = {
+        'storagetype:storagegrouptags': u'good, comma,  separated,list'}
+    vol_type_extra_specs_tags_bad = {
+        'storagetype:storagegrouptags': u'B&d, [list]'}
+    extra_specs_port_group_template = deepcopy(extra_specs)
+    extra_specs_port_group_template['port_group_template'] = 'portGroupName'
     extra_specs_migrate = deepcopy(extra_specs)
     extra_specs_migrate[utils.PORTGROUPNAME] = port_group_name_f
 
@@ -285,17 +411,23 @@ class PowerMaxData(object):
     rep_extra_specs['array'] = remote_array
     rep_extra_specs['interval'] = 1
     rep_extra_specs['retries'] = 1
-    rep_extra_specs['srp'] = srp2
+    rep_extra_specs['srp'] = srp
     rep_extra_specs['rep_mode'] = 'Synchronous'
+    rep_extra_specs['sync_interval'] = 3
+    rep_extra_specs['sync_retries'] = 200
+    rep_extra_specs['rdf_group_label'] = rdf_group_name_1
+    rep_extra_specs['rdf_group_no'] = rdf_group_no_1
     rep_extra_specs2 = deepcopy(rep_extra_specs)
     rep_extra_specs2[utils.PORTGROUPNAME] = port_group_name_f
     rep_extra_specs3 = deepcopy(rep_extra_specs)
     rep_extra_specs3['slo'] = slo
     rep_extra_specs3['workload'] = workload
     rep_extra_specs4 = deepcopy(rep_extra_specs3)
-    rep_extra_specs4['rdf_group_label'] = rdf_group_name
+    rep_extra_specs4['rdf_group_label'] = rdf_group_name_1
     rep_extra_specs5 = deepcopy(rep_extra_specs2)
     rep_extra_specs5['target_array_model'] = 'VMAX250F'
+    rep_extra_specs5['sync_interval'] = 3
+    rep_extra_specs5['sync_retries'] = 200
     rep_extra_specs6 = deepcopy(rep_extra_specs3)
     rep_extra_specs6['target_array_model'] = 'PMAX2000'
 
@@ -307,9 +439,49 @@ class PowerMaxData(object):
     rep_extra_specs_legacy = deepcopy(rep_extra_specs_ode)
     rep_extra_specs_legacy['mode'] = 'Synchronous'
 
+    rep_extra_specs_rep_config = deepcopy(rep_extra_specs6)
+    rep_extra_specs_rep_config[utils.REP_CONFIG] = rep_config_sync
+
+    extra_specs_tags = deepcopy(extra_specs)
+    extra_specs_tags.update({utils.STORAGE_GROUP_TAGS: sg_tags})
+
+    rep_extra_specs_mgmt = deepcopy(rep_extra_specs)
+    rep_extra_specs_mgmt['srp'] = srp
+    rep_extra_specs_mgmt['mgmt_sg_name'] = rdf_managed_async_grp
+    rep_extra_specs_mgmt['sg_name'] = default_sg_no_slo_re_enabled
+    rep_extra_specs_mgmt['rdf_group_no'] = rdf_group_no_1
+    rep_extra_specs_mgmt['rdf_group_label'] = rdf_group_name_1
+    rep_extra_specs_mgmt['target_array_model'] = array_model
+    rep_extra_specs_mgmt['slo'] = 'Diamond'
+    rep_extra_specs_mgmt['workload'] = 'NONE'
+    rep_extra_specs_mgmt['sync_interval'] = 2
+    rep_extra_specs_mgmt['sync_retries'] = 200
+
+    rep_extra_specs_metro = deepcopy(rep_extra_specs)
+    rep_extra_specs_metro[utils.REP_MODE] = utils.REP_METRO
+    rep_extra_specs_metro[utils.METROBIAS] = True
+    rep_extra_specs_metro['replication_enabled'] = '<is> True'
+
+    rep_config = {
+        'array': remote_array, 'srp': srp, 'portgroup': port_group_name_i,
+        'rdf_group_no': rdf_group_no_1, 'sync_retries': 200,
+        'sync_interval': 1, 'rdf_group_label': rdf_group_name_1,
+        'allow_extend': True, 'mode': utils.REP_METRO}
+
+    ex_specs_rep_config = deepcopy(rep_extra_specs_metro)
+    ex_specs_rep_config['array'] = array
+    ex_specs_rep_config['rep_config'] = rep_config
+
+    ex_specs_rep_config_no_extend = deepcopy(ex_specs_rep_config)
+    ex_specs_rep_config_no_extend['rep_config']['allow_extend'] = False
+
     test_volume_type_1 = volume_type.VolumeType(
         id='2b06255d-f5f0-4520-a953-b029196add6a', name='abc',
         extra_specs=extra_specs)
+
+    ex_specs_rep_config_sync = deepcopy(ex_specs_rep_config)
+    ex_specs_rep_config_sync[utils.REP_MODE] = utils.REP_SYNC
+    ex_specs_rep_config_sync[utils.REP_CONFIG]['mode'] = utils.REP_SYNC
 
     test_volume_type_list = volume_type.VolumeTypeList(
         objects=[test_volume_type_1])
@@ -391,7 +563,9 @@ class PowerMaxData(object):
         'storagegroup_name': storagegroup_name_f,
         'volume_name': test_volume.name,
         'workload': workload,
-        'replication_enabled': False}
+        'replication_enabled': False,
+        'used_host_name': 'HostX',
+        'port_group_label': port_group_name_f}
 
     masking_view_dict_no_slo = deepcopy(masking_view_dict)
     masking_view_dict_no_slo.update(
@@ -413,6 +587,10 @@ class PowerMaxData(object):
         {utils.EXTRA_SPECS: extra_specs, utils.IS_MULTIATTACH: True,
          utils.OTHER_PARENT_SG: parent_sg_i, utils.FAST_SG:
              storagegroup_name_i, utils.NO_SLO_SG: no_slo_sg_name})
+
+    masking_view_dict_tags = deepcopy(masking_view_dict)
+    masking_view_dict_tags.update(
+        {'tag_list': sg_tags})
 
     # vmax data
     # sloprovisioning
@@ -533,13 +711,23 @@ class PowerMaxData(object):
     sg_rdf_details = [{'storageGroupName': test_vol_grp_name,
                        'symmetrixId': array,
                        'modes': ['Synchronous'],
-                       'rdfGroupNumber': rdf_group_no,
+                       'rdfGroupNumber': rdf_group_no_1,
                        'states': ['Synchronized']},
                       {'storageGroupName': test_fo_vol_group,
                        'symmetrixId': array,
                        'modes': ['Synchronous'],
-                       'rdfGroupNumber': rdf_group_no,
+                       'rdfGroupNumber': rdf_group_no_1,
                        'states': ['Failed Over']}]
+
+    sg_rdf_group_details = {
+        "storageGroupName": test_vol_grp_name,
+        "symmetrixId": array,
+        "volumeRdfTypes": ["R1"],
+        "modes": ["Asynchronous"],
+        "totalTracks": 8205,
+        "largerRdfSides": ["Equal"],
+        "rdfGroupNumber": 1,
+        "states": ["suspended"]}
 
     sg_list = {'storageGroupId': [storagegroup_name_f,
                                   defaultstoragegroup_name]}
@@ -627,6 +815,17 @@ class PowerMaxData(object):
                              'snapvx_target': 'false',
                              'snapvx_source': 'false',
                              'storageGroupId': []}
+
+    volume_details_attached_async = (
+        {'cap_gb': 2,
+         'num_of_storage_groups': 1,
+         'volumeId': device_id,
+         'volume_identifier': 'OS-%s' % test_volume.id,
+         'wwn': volume_wwn,
+         'snapvx_target': 'false',
+         'snapvx_source': 'false',
+         'storageGroupId': [
+             rdf_managed_async_grp, storagegroup_name_f + '-RA']})
 
     volume_list = [
         {'id': '6b70de13-98c5-46b2-8f24-e4e96a8988fa',
@@ -740,19 +939,25 @@ class PowerMaxData(object):
                         {'name': 'another-target',
                          'percentageCopied': 90}]
 
-    rdf_group_list = {'rdfGroupID': [{'rdfgNumber': rdf_group_no,
-                                      'label': rdf_group_name}]}
+    rdf_group_list = {'rdfGroupID': [{'rdfgNumber': rdf_group_no_1,
+                                      'label': rdf_group_name_1},
+                                     {'rdfgNumber': rdf_group_no_2,
+                                      'label': rdf_group_name_2},
+                                     {'rdfgNumber': rdf_group_no_3,
+                                      'label': rdf_group_name_3},
+                                     {'rdfgNumber': rdf_group_no_4,
+                                      'label': rdf_group_name_4}]}
     rdf_group_details = {'modes': ['Synchronous'],
                          'remoteSymmetrix': remote_array,
-                         'label': rdf_group_name,
+                         'label': rdf_group_name_1,
                          'type': 'Dynamic',
                          'numDevices': 1,
-                         'remoteRdfgNumber': rdf_group_no,
-                         'rdfgNumber': rdf_group_no}
-    rdf_group_vol_details = {'remoteRdfGroupNumber': rdf_group_no,
+                         'remoteRdfgNumber': rdf_group_no_1,
+                         'rdfgNumber': rdf_group_no_1}
+    rdf_group_vol_details = {'remoteRdfGroupNumber': rdf_group_no_1,
                              'localSymmetrixId': array,
                              'volumeConfig': 'RDF1+TDEV',
-                             'localRdfGroupNumber': rdf_group_no,
+                             'localRdfGroupNumber': rdf_group_no_1,
                              'localVolumeName': device_id,
                              'rdfpairState': 'Synchronized',
                              'remoteVolumeName': device_id2,
@@ -760,6 +965,14 @@ class PowerMaxData(object):
                              'rdfMode': 'Synchronous',
                              'remoteVolumeState': 'Write Disabled',
                              'remoteSymmetrixId': remote_array}
+
+    rdf_group_vol_details_not_synced = {
+        'remoteRdfGroupNumber': rdf_group_no_1, 'localSymmetrixId': array,
+        'volumeConfig': 'RDF1+TDEV', 'localRdfGroupNumber': rdf_group_no_1,
+        'localVolumeName': device_id, 'rdfpairState': 'syncinprog',
+        'remoteVolumeName': device_id2, 'localVolumeState': 'Ready',
+        'rdfMode': 'Synchronous', 'remoteVolumeState': 'Write Disabled',
+        'remoteSymmetrixId': remote_array}
 
     # system
     job_list = [{'status': 'SUCCEEDED',
@@ -823,7 +1036,8 @@ class PowerMaxData(object):
             'numStorageGroups': 0, 'reservationInfo': {'reserved': False},
             'encapsulated': False, 'formattedName': '00001',
             'system_resource': False, 'numSymDevMaskingViews': 0,
-            'nameModifier': "", 'configuration': 'TDEV'},
+            'nameModifier': "", "userDefinedIdentifier": "N/A",
+            'configuration': 'TDEV'},
             'maskingInfo': {'masked': False},
             'rdfInfo': {
                 'dynamicRDF': False, 'RDF': False,
@@ -848,7 +1062,8 @@ class PowerMaxData(object):
             'reservationInfo': {'reserved': False}, 'mapped': False,
             'encapsulated': False, 'formattedName': '00001',
             'system_resource': False, 'numSymDevMaskingViews': 0,
-            'nameModifier': "", 'configuration': 'TDEV'},
+            'nameModifier': "", "userDefinedIdentifier": "N/A",
+            'configuration': 'TDEV'},
             'rdfInfo': {
                 'dynamicRDF': False, 'RDF': False,
                 'concurrentRDF': False,
@@ -871,7 +1086,8 @@ class PowerMaxData(object):
             'reservationInfo': {'reserved': False}, 'mapped': False,
             'encapsulated': False, 'formattedName': '00002',
             'system_resource': False, 'numSymDevMaskingViews': 0,
-            'nameModifier': "", 'configuration': 'TDEV'},
+            'nameModifier': "", "userDefinedIdentifier": "N/A",
+            'configuration': 'TDEV'},
             'rdfInfo': {
                 'dynamicRDF': False, 'RDF': False,
                 'concurrentRDF': False,
@@ -894,7 +1110,8 @@ class PowerMaxData(object):
             'reservationInfo': {'reserved': False}, 'mapped': False,
             'encapsulated': False, 'formattedName': '00003',
             'system_resource': False, 'numSymDevMaskingViews': 0,
-            'nameModifier': "", 'configuration': 'TDEV'},
+            'nameModifier': "", "userDefinedIdentifier": "N/A",
+            'configuration': 'TDEV'},
             'rdfInfo': {
                 'dynamicRDF': False, 'RDF': False,
                 'concurrentRDF': False,
@@ -917,7 +1134,8 @@ class PowerMaxData(object):
             'reservationInfo': {'reserved': False}, 'mapped': False,
             'encapsulated': False, 'formattedName': '00004',
             'system_resource': False, 'numSymDevMaskingViews': 0,
-            'nameModifier': "", 'configuration': 'TDEV'},
+            'nameModifier': "", "userDefinedIdentifier": "N/A",
+            'configuration': 'TDEV'},
             'rdfInfo': {
                 'dynamicRDF': False, 'RDF': False,
                 'concurrentRDF': False,
@@ -942,7 +1160,8 @@ class PowerMaxData(object):
             'numStorageGroups': 0, 'reservationInfo': {'reserved': False},
             'encapsulated': False, 'formattedName': '00001',
             'system_resource': False, 'numSymDevMaskingViews': 0,
-            'nameModifier': "", 'configuration': 'TDEV'},
+            'nameModifier': "", "userDefinedIdentifier": "N/A",
+            'configuration': 'TDEV'},
             'maskingInfo': {'masked': False},
             'rdfInfo': {
                 'dynamicRDF': False, 'RDF': False,
@@ -956,7 +1175,8 @@ class PowerMaxData(object):
             'numStorageGroups': 0, 'reservationInfo': {'reserved': False},
             'encapsulated': False, 'formattedName': '00002',
             'system_resource': False, 'numSymDevMaskingViews': 1,
-            'nameModifier': "", 'configuration': 'TDEV'},
+            'nameModifier': "", "userDefinedIdentifier": "N/A",
+            'configuration': 'TDEV'},
             'maskingInfo': {'masked': False},
             'rdfInfo': {
                 'dynamicRDF': False, 'RDF': False,
@@ -970,7 +1190,8 @@ class PowerMaxData(object):
             'numStorageGroups': 0, 'reservationInfo': {'reserved': False},
             'encapsulated': False, 'formattedName': '00003',
             'system_resource': False, 'numSymDevMaskingViews': 0,
-            'nameModifier': "", 'configuration': 'TDEV'},
+            'nameModifier': "", "userDefinedIdentifier": "N/A",
+            'configuration': 'TDEV'},
             'maskingInfo': {'masked': False},
             'rdfInfo': {
                 'dynamicRDF': False, 'RDF': False,
@@ -984,7 +1205,8 @@ class PowerMaxData(object):
             'numStorageGroups': 0, 'reservationInfo': {'reserved': False},
             'encapsulated': False, 'formattedName': '00004',
             'system_resource': False, 'numSymDevMaskingViews': 0,
-            'nameModifier': "", 'configuration': 'TDEV'},
+            'nameModifier': "", "userDefinedIdentifier": "N/A",
+            'configuration': 'TDEV'},
             'maskingInfo': {'masked': False},
             'rdfInfo': {
                 'dynamicRDF': False, 'RDF': False,
@@ -998,13 +1220,16 @@ class PowerMaxData(object):
             'numStorageGroups': 0, 'reservationInfo': {'reserved': False},
             'encapsulated': False, 'formattedName': '00005',
             'system_resource': False, 'numSymDevMaskingViews': 0,
-            'nameModifier': 'OS-vol', 'configuration': 'TDEV'},
+            'nameModifier': 'OS-vol', "userDefinedIdentifier": "OS-vol",
+            'configuration': 'TDEV'},
             'maskingInfo': {'masked': False},
             'rdfInfo': {
                 'dynamicRDF': False, 'RDF': False,
                 'concurrentRDF': False,
                 'getDynamicRDFCapability': 'RDF1_Capable', 'RDFA': False},
             'timeFinderInfo': {'snapVXTgt': False, 'snapVXSrc': False}}]
+
+    volume_create_info_dict = {utils.ARRAY: array, utils.DEVICE_ID: device_id}
 
     volume_info_dict = {
         'volume_id': volume_id,
@@ -1043,9 +1268,12 @@ class PowerMaxData(object):
         "vp_saved_percent": 99.9
     }
 
+    storage_group_with_tags = deepcopy(add_volume_sg_info_dict)
+    storage_group_with_tags.update({"tags": sg_tags})
+
     data_dict = {volume_id: volume_info_dict}
     platform = 'Linux-4.4.0-104-generic-x86_64-with-Ubuntu-16.04-xenial'
-    unisphere_version = u'V9.1.0.1054'
+    unisphere_version = u'V9.1.0.14'
     unisphere_version_90 = "V9.0.0.1"
     openstack_release = '12.0.0.0b3.dev401'
     openstack_version = '12.0.0'
@@ -1214,3 +1442,83 @@ class PowerMaxData(object):
 
     volume_metadata = {
         'DeviceID': device_id, 'ArrayID': array, 'ArrayModel': array_model}
+
+    # retype metadata dict
+    retype_metadata_dict = {
+        'device_id': device_id,
+        'rdf_group_no': '10',
+        'remote_array': remote_array,
+        'target_device_id': device_id,
+        'rep_mode': 'Asynchronous',
+        'replication_status': 'enabled',
+        'target_array_model': array_model}
+
+    retype_metadata_dict2 = {
+        'default_sg_name': 'default-sg',
+        'service_level': 'Diamond'
+    }
+
+    rep_info_dict = {
+        'device_id': device_id,
+        'local_array': array, 'remote_array': remote_array,
+        'target_device_id': device_id2, 'target_name': 'test_vol',
+        'rdf_group_no': rdf_group_no_1, 'rep_mode': 'Metro',
+        'replication_status': 'Enabled', 'rdf_group_label': rdf_group_name_1,
+        'target_array_model': array_model,
+        'rdf_mgmt_grp': rdf_managed_async_grp}
+
+    create_vol_with_replication_payload = {
+        'executionOption': 'ASYNCHRONOUS',
+        'editStorageGroupActionParam': {
+            'expandStorageGroupParam': {
+                'addVolumeParam': {
+                    'emulation': 'FBA',
+                    'create_new_volumes': 'False',
+                    'volumeAttributes': [
+                        {'num_of_vols': 1,
+                         'volumeIdentifier': {
+                             'identifier_name': (
+                                 volume_details[0]['volume_identifier']),
+                             'volumeIdentifierChoice': 'identifier_name'},
+                         'volume_size': test_volume.size,
+                         'capacityUnit': 'GB'}],
+                    'remoteSymmSGInfoParam': {
+                        'force': 'true',
+                        'remote_symmetrix_1_id': remote_array,
+                        'remote_symmetrix_1_sgs': [
+                            defaultstoragegroup_name]}}}}}
+
+    r1_sg_list = [default_sg_no_slo_re_enabled,
+                  rdf_managed_async_grp]
+
+    r2_sg_list = deepcopy(r1_sg_list)
+    replication_model = (
+        {'provider_location': six.text_type(provider_location),
+         'metadata': {'DeviceID': device_id,
+                      'DeviceLabel': 'OS-%s' % volume_id,
+                      'ArrayID': array,
+                      'ArrayModel': array_model,
+                      'ServiceLevel': 'Silver',
+                      'Workload': 'NONE',
+                      'Emulation': 'FBA',
+                      'Configuration': 'TDEV',
+                      'CompressionDisabled': False,
+                      'R2-DeviceID': device_id2,
+                      'R2-ArrayID': remote_array,
+                      'R2-ArrayModel': array_model,
+                      'ReplicationMode': 'Synchronous',
+                      'RDFG-Label': rdf_group_name_1,
+                      'R1-RDFG': rdf_group_no_1,
+                      'R2-RDFG': rdf_group_no_1}})
+
+    non_replication_model = (
+        {'provider_location': six.text_type(provider_location),
+         'metadata': {'DeviceID': device_id,
+                      'DeviceLabel': 'OS-%s' % volume_id,
+                      'ArrayID': array,
+                      'ArrayModel': array_model,
+                      'ServiceLevel': 'Silver',
+                      'Workload': 'NONE',
+                      'Emulation': 'FBA',
+                      'Configuration': 'TDEV',
+                      'CompressionDisabled': False}})
