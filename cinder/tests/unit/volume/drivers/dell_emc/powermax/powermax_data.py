@@ -250,7 +250,7 @@ class PowerMaxData(object):
 
     test_volume_attachment = volume_attachment.VolumeAttachment(
         id='2b06255d-f5f0-4520-a953-b029196add6b', volume_id=test_volume.id,
-        connector=connector)
+        connector=connector, attached_host='HostX')
 
     location_info = {'location_info': '000197800123#SRP_1#Diamond#DSS',
                      'storage_protocol': 'FC'}
@@ -645,14 +645,16 @@ class PowerMaxData(object):
                              'snapvx_source': 'false',
                              'storageGroupId': []}
 
-    volume_details_legacy = {'cap_gb': 2,
-                             'num_of_storage_groups': 1,
-                             'volumeId': device_id,
-                             'volume_identifier': test_volume.id,
-                             'wwn': volume_wwn,
-                             'snapvx_target': 'false',
-                             'snapvx_source': 'false',
-                             'storageGroupId': []}
+    volume_details_attached_async = (
+        {'cap_gb': 2,
+         'num_of_storage_groups': 1,
+         'volumeId': device_id,
+         'volume_identifier': 'OS-%s' % test_volume.id,
+         'wwn': volume_wwn,
+         'snapvx_target': 'false',
+         'snapvx_source': 'false',
+         'storageGroupId': [
+             rdf_managed_async_grp, storagegroup_name_f + '-RA']})
 
     volume_list = [
         {'id': '6b70de13-98c5-46b2-8f24-e4e96a8988fa',
@@ -1253,3 +1255,18 @@ class PowerMaxData(object):
 
     volume_metadata = {
         'DeviceID': device_id, 'ArrayID': array, 'ArrayModel': array_model}
+
+    # retype metadata dict
+    retype_metadata_dict = {
+        'device_id': device_id,
+        'rdf_group_no': '10',
+        'remote_array': remote_array,
+        'target_device_id': device_id,
+        'rep_mode': 'Asynchronous',
+        'replication_status': 'enabled',
+        'target_array_model': array_model}
+
+    retype_metadata_dict2 = {
+        'default_sg_name': 'default-sg',
+        'service_level': 'Diamond'
+    }
