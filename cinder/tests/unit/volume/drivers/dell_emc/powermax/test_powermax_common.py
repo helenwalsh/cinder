@@ -3065,19 +3065,10 @@ class PowerMaxCommonTest(test.TestCase):
             self.common.update_metadata, model_update, existing_metadata,
             object_metadata)
 
-    @mock.patch.object(utils.PowerMaxUtils, 'get_volume_group_utils',
-                       return_value=(None, {'interval': 1, 'retries': 1}))
-    def test_get_volume_group_info(self, mock_group_utils):
-        self.common.interval = 1
-        self.common.retries = 1
-        with mock.patch.object(
-                self.common, '_get_configuration_value') as mock_array:
-            self.common._get_volume_group_info(
-                self.data.test_group_1)
-            mock_group_utils.assert_called_once_with(
-                self.data.test_group_1, self.common.interval,
-                self.common.retries)
-            mock_array.assert_called_once()
+    def test_remove_stale_data(self):
+        ret_model_update = self.common.remove_stale_data(
+            self.data.replication_model)
+        self.assertEqual(self.data.non_replication_model, ret_model_update)
 
     @mock.patch.object(rest.PowerMaxRest, 'get_storage_group',
                        return_value=tpd.PowerMaxData.add_volume_sg_info_dict)
