@@ -37,7 +37,7 @@ SLOPROVISIONING = 'sloprovisioning'
 REPLICATION = 'replication'
 SYSTEM = 'system'
 U4V_VERSION = '91'
-MIN_U4P_VERSION = '9.1.0.5'
+MIN_U4P_VERSION = '9.1.0.14'
 UCODE_5978 = '5978'
 retry_exc_tuple = (exception.VolumeBackendAPIException,)
 # HTTP constants
@@ -3017,14 +3017,20 @@ class PowerMaxRest(object):
 
         :returns: unisphere_meets_min_req -- boolean
         """
-        running_version, __ = self.get_uni_version()
+        running_version, major_version = self.get_uni_version()
         minimum_version = MIN_U4P_VERSION
         unisphere_meets_min_req = False
 
         if running_version and (running_version[0].isalpha()):
             # remove leading letter
-            version = running_version[1:]
-            unisphere_meets_min_req = version >= minimum_version
+            if running_version.lower()[0] == 'v':
+                version = running_version[1:]
+                unisphere_meets_min_req = (
+                    self.utils.version_meet_req(version, minimum_version))
+            elif running_version.lower()[0] == 't':
+                LOG.warning("%(version)s This is not a official release of "
+                            "Unisphere.", {'version': running_version})
+                return major_version >= U4V_VERSION
 
         if unisphere_meets_min_req:
             LOG.info("Unisphere version %(running_version)s meets minimum "
