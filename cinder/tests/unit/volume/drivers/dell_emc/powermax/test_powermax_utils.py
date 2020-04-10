@@ -1346,7 +1346,7 @@ class PowerMaxUtilsTest(test.TestCase):
             self.utils.get_rep_config(backend_id, rep_configs)
         except exception.InvalidInput as e:
             expected_str = 'Could not find replication_device. Legacy'
-            excep_msg = str(e)
+            excep_msg = six.text_type(e)
             self.assertNotIn(expected_str, excep_msg)
 
     def test_get_rep_config_fail_legacy_backend_id_message(self):
@@ -1356,7 +1356,7 @@ class PowerMaxUtilsTest(test.TestCase):
             self.utils.get_rep_config(backend_id, rep_configs)
         except exception.InvalidInput as e:
             expected_str = 'Could not find replication_device. Legacy'
-            excep_msg = str(e)
+            excep_msg = six.text_type(e)
             self.assertIn(expected_str, excep_msg)
 
     def test_get_replication_targets(self):
