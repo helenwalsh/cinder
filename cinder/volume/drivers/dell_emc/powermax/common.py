@@ -5920,10 +5920,14 @@ class PowerMaxCommon(object):
         """
         snap_info = self.rest.get_volume_snap_info(array, device_id)
         device_name = snap_info['deviceName']
-        device_label = device_name.split(':')[1]
+        try:
+            device_label = device_name.split(':')[1]
+        except IndexError:
+            device_label = None
         metadata = {'SnapshotLabel': snap_name,
-                    'SourceDeviceID': device_id,
-                    'SourceDeviceLabel': device_label}
+                    'SourceDeviceID': device_id}
+        if device_label:
+            metadata.update({'SourceDeviceLabel': device_label})
 
         return metadata
 

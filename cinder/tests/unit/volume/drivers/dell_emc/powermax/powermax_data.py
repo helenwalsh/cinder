@@ -1440,6 +1440,9 @@ class PowerMaxData(object):
              'snapshotName': test_snapshot_snap_name,
              'state': 'Established'}]}
 
+    priv_snap_response_no_label = deepcopy(priv_snap_response)
+    priv_snap_response_no_label.update({'deviceName': device_id})
+
     volume_metadata = {
         'DeviceID': device_id, 'ArrayID': array, 'ArrayModel': array_model}
 
