@@ -77,7 +77,7 @@ class PowerMaxData(object):
     rdf_group_no_2 = '71'
     rdf_group_no_3 = '72'
     rdf_group_no_4 = '73'
-    u4v_version = '91'
+    u4v_version = '92'
     storagegroup_name_source = 'Grp_source_sg'
     storagegroup_name_target = 'Grp_target_sg'
     group_snapshot_name = 'Grp_snapshot'
@@ -987,7 +987,7 @@ class PowerMaxData(object):
                  {'symmetrixId': array_herc,
                   'model': 'PowerMax 2000',
                   'ucode': '5978.1091.1092'}]
-    version_details = {'version': 'V9.1.0.1054'}
+    version_details = {'version': 'V9.2.0.0'}
 
     headroom = {'headroom': [{'headroomCapacity': 20348.29}]}
 
@@ -1273,7 +1273,7 @@ class PowerMaxData(object):
 
     data_dict = {volume_id: volume_info_dict}
     platform = 'Linux-4.4.0-104-generic-x86_64-with-Ubuntu-16.04-xenial'
-    unisphere_version = u'V9.1.0.14'
+    unisphere_version = u'V9.2.0.0'
     unisphere_version_90 = "V9.0.0.1"
     openstack_release = '12.0.0.0b3.dev401'
     openstack_version = '12.0.0'
@@ -1525,3 +1525,14 @@ class PowerMaxData(object):
                       'Emulation': 'FBA',
                       'Configuration': 'TDEV',
                       'CompressionDisabled': False}})
+
+    staging_sg = 'STG-myhostB-4732de9b-98a4-4b6d-ae4b-3cafb3d34220-SG'
+    staging_mv1 = 'STG-myhostA-4732de9b-98a4-4b6d-ae4b-3cafb3d34220-MV'
+    staging_mv2 = 'STG-myhostB-4732de9b-98a4-4b6d-ae4b-3cafb3d34220-MV'
+    staging_mvs = [staging_mv1, staging_mv2]
+    legacy_mv1 = 'OS-myhostA-No_SLO-e14f48b8-MV'
+    legacy_mv2 = 'OS-myhostB-No_SLO-e14f48b8-MV'
+    legacy_shared_sg = 'OS-myhostA-No_SLO-SG'
+    legacy_mvs = [legacy_mv1, legacy_mv2]
+    legacy_not_shared_mv = 'OS-myhostA-SRP_1-Diamond-NONE-MV'
+    legacy_not_shared_sg = 'OS-myhostA-SRP_1-Diamond-NONE-SG'

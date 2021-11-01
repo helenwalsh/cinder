@@ -15,9 +15,8 @@
 
 from copy import deepcopy
 import time
-from unittest import mock
-from unittest.mock import call
 
+import mock
 import requests
 
 from cinder import exception
@@ -1695,7 +1694,7 @@ class PowerMaxRestTest(test.TestCase):
 
     def test_get_iterator_list(self):
         with mock.patch.object(
-                self.rest, '_get_request', side_effect=[
+                self.rest, 'get_request', side_effect=[
                     self.data.rest_iterator_resonse_one,
                     self.data.rest_iterator_resonse_two]):
             expected_response = [
@@ -1744,7 +1743,7 @@ class PowerMaxRestTest(test.TestCase):
 
     def test_get_vmax_model(self):
         reference = 'PowerMax_2000'
-        with mock.patch.object(self.rest, '_get_request',
+        with mock.patch.object(self.rest, 'get_request',
                                return_value=self.data.powermax_model_details):
             self.assertEqual(self.rest.get_vmax_model(self.data.array),
                              reference)
@@ -2224,7 +2223,7 @@ class PowerMaxRestTest(test.TestCase):
                           array_id, sg_name, rdf_group_no, rep_extra_specs)
 
     def test_validate_unisphere_version_unofficial_success(self):
-        version = 'T9.1.0.1054'
+        version = 'T9.2.0.1054'
         returned_version = {'version': version}
         with mock.patch.object(self.rest, "request",
                                return_value=(200,

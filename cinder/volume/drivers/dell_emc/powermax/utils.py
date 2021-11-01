@@ -1,4 +1,4 @@
-# Copyright (c) 2017-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2020 Dell Inc. or its subsidiaries.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -134,6 +134,22 @@ POWERMAX_ARRAY_TAG_LIST = 'powermax_array_tag_list'
 POWERMAX_SHORT_HOST_NAME_TEMPLATE = 'powermax_short_host_name_template'
 POWERMAX_PORT_GROUP_NAME_TEMPLATE = 'powermax_port_group_name_template'
 PORT_GROUP_LABEL = 'port_group_label'
+
+# Array Models, Service Levels & Workloads
+VMAX_HYBRID_MODELS = ['VMAX100K', 'VMAX200K', 'VMAX400K']
+VMAX_AFA_MODELS = ['VMAX250F', 'VMAX450F', 'VMAX850F', 'VMAX950F']
+PMAX_MODELS = ['PowerMax_2000', 'PowerMax_8000']
+
+HYBRID_SLS = ['Diamond', 'Platinum', 'Gold', 'Silver', 'Bronze', 'Optimized',
+              'None', 'NONE']
+HYBRID_WLS = ['OLTP', 'OLTP_REP', 'DSS', 'DSS_REP', 'NONE', 'None']
+AFA_H_SLS = ['Diamond', 'Optimized', 'None', 'NONE']
+AFA_P_SLS = ['Diamond', 'Platinum', 'Gold', 'Silver', 'Bronze', 'Optimized',
+             'None', 'NONE']
+AFA_WLS = ['OLTP', 'OLTP_REP', 'DSS', 'DSS_REP', 'NONE', 'None']
+PMAX_SLS = ['Diamond', 'Platinum', 'Gold', 'Silver', 'Bronze', 'Optimized',
+            'None', 'NONE']
+PMAX_WLS = ['NONE', 'None']
 
 # Array Models, Service Levels & Workloads
 VMAX_HYBRID_MODELS = ['VMAX100K', 'VMAX200K', 'VMAX400K']
